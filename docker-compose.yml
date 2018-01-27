@@ -2,15 +2,16 @@ version: '2'
 
 services:
 
-  myapp:
-    build: .
-    ports:
-      - 8080:8080
-    depends_on:
-      - users
   db:
     image: mysql
     restart: always
     environment:
         MYSQL_DATABASE: "users"
         MYSQL_ROOT_PASSWORD: hao825_MDL7519
+
+  myapp:
+    build: .
+    ports:
+      - 8080:8080
+    links:
+      - db
