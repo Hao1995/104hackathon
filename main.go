@@ -2,10 +2,12 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
 	"net/http"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -36,6 +38,7 @@ func Read(res http.ResponseWriter, req *http.Request) {
 	chechkErr(err)
 	values := make([]sql.RawBytes, len(columns))
 	scanArgs := make([]interface{}, len(values))
+	tableDatas := make([]map[string]interface{}, 0)
 	for i := range values {
 		scanArgs[i] = &values[i]
 	}
@@ -43,29 +46,46 @@ func Read(res http.ResponseWriter, req *http.Request) {
 	for rows.Next() {
 		err = rows.Scan(scanArgs...)
 		chechkErr(err)
-		var value string
+		tableData := make(map[string]interface{})
+
 		for i, col := range values {
+			var value interface{}
 			if col == nil {
 				value = "NULL"
 			} else {
 				value = string(col)
 			}
-			fmt.Println(columns[i], ": ", value)
+			tableData[columns[i]] = value
 		}
-		fmt.Println("-----------------------------------")
+		tableDatas = append(tableDatas, tableData)
 	}
 
+	jsonData, err := json.Marshal(tableDatas)
+	chechkErr(err)
+	fmt.Println(string(jsonData))
+	io.WriteString(res, string(jsonData))
 }
+
 func Create(res http.ResponseWriter, req *http.Request) {
-	stmt, err := db.Prepare("INSERT users SET name=?,message=?")
+
+	req.ParseForm()
+	user := make(map[string]interface{})
+	for k, v := range req.Form {
+		switch k {
+		case "name":
+			user[k] = strings.Join(v, "")
+		case "message":
+			user[k] = strings.Join(v, "")
+		}
+	}
+
+	insert, err := db.Prepare("INSERT users SET name=?,message=?")
 	chechkErr(err)
-	dbres, err := stmt.Exec("harry", "test~~~")
+	_, err = insert.Exec(user["name"], user["message"])
 	chechkErr(err)
 
-	id, err := dbres.LastInsertId()
-	chechkErr(err)
-
-	io.WriteString(res, fmt.Sprintln(id))
+	str := "<h1>Success Insert</h1> <h3>Name: " + user["name"].(string) + "</h3>" + "<h3>Message: " + user["message"].(string) + "</h3>" + "\n\n" + "<a href=\"/\">Come back to home page</a>"
+	io.WriteString(res, str)
 }
 
 func chechkErr(err error) {

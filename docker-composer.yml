@@ -1,0 +1,15 @@
+version: '2'
+
+services:
+
+  drupal:
+    image: golang:1.8
+    restart: always
+    ports:
+      - 8080:8080
+
+  db:
+    image: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: hao825_MDL7519
