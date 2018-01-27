@@ -10,6 +10,5 @@ services:
     image: mysql
     restart: always
     environment:
-      - MYSQL_DATABASE: "users"
-      - MYSQL_USER: root
-      - MYSQL_ROOT_PASSWORD: hao825_MDL7519
+        MYSQL_DATABASE: "users"
+        MYSQL_ROOT_PASSWORD: hao825_MDL7519
