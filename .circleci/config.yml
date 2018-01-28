@@ -28,7 +28,8 @@ jobs:
       - deploy:
           name: Push application Docker image
           command: |
-            docker login -e $DOCKER_HUB_EMAIL -u $DOCKER_HUB_USER_ID -p $DOCKER_HUB_PWD
+            docker login -u $DOCKER_HUB_USER_ID -p $DOCKER_HUB_PWD
             docker tag docker_example $DOCKER_HUB_USER_ID/docker-example:$CIRCLE_SHA1
             docker tag docker_example $DOCKER_HUB_USER_ID/docker-example:latest
             docker push $DOCKER_HUB_USER_ID/docker-example:$CIRCLE_SHA1
+            docker push $DOCKER_HUB_USER_ID/docker-example:latest
