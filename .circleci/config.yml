@@ -22,7 +22,7 @@ jobs:
       - run: go get -v -t -d ./...
       - run: go test -v ./...
 
-      - depoly:
+      - deploy:
         name: Push application Docker image
         command: |
           docker login -e $DOCKER_HUB_EMAIL -u $DOCKER_HUB_USER_ID -P $DOCKER_HUB_PWD
