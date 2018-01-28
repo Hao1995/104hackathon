@@ -16,16 +16,17 @@ var db *sql.DB
 var dberr error
 
 func init() {
-	db, dberr = sql.Open("mysql", "root:password@tcp(localhost:3306)/users")
+	db, dberr = sql.Open("mysql", "root:password@tcp(localhost:3306)/")
+	// db, dberr = sql.Open("mysql", "root:hao825_MDL7519@tcp(localhost:3306)/")
 	chechkErr(dberr)
 
-	_, dberr = db.Exec("CREATE DATABASE users")
+	_, dberr = db.Exec("CREATE DATABASE IF NOT EXISTS users")
 	chechkErr(dberr)
 
 	_, dberr = db.Exec("USE users")
 	chechkErr(dberr)
 
-	_, dberr = db.Exec("CREATE TABLE users ( id INT NOT NULL AUTO_INCREMENT, name VARCHAR(20), message VARCHAR(200), PRIMARY KEY (id))")
+	_, dberr = db.Exec("CREATE TABLE IF NOT EXISTS users ( id INT NOT NULL AUTO_INCREMENT, name VARCHAR(20), message VARCHAR(200), PRIMARY KEY (id))")
 	chechkErr(dberr)
 }
 
