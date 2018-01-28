@@ -21,7 +21,10 @@ jobs:
       # specify any bash command here prefixed with `run: `
       - run: go get -v -t -d ./...
       - run: go test -v ./...
-
+      - run:
+          name: Run tests
+          command: |
+            docker-compose up -d
       - deploy:
           name: Push application Docker image
           command: |
