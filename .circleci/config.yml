@@ -1,8 +1,8 @@
 version: 2
 jobs:
   build:
-    # working_directory: /go/src/github.com/Hao1995/Docker-Example
-    working_directory: /docker-example
+    working_directory: /go/src/github.com/Hao1995/Docker-Example
+    # working_directory: /docker-example
     docker:
       # specify the version
       - image: circleci/golang:1.8
