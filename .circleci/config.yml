@@ -1,6 +1,8 @@
 version: 2
 jobs:
   build:
+    # working_directory: /go/src/github.com/Hao1995/Docker-Example
+    working_directory: /docker-example
     docker:
       # specify the version
       - image: circleci/golang:1.8
@@ -14,7 +16,6 @@ jobs:
     #### expecting it in the form of
     ####   /go/src/github.com/circleci/go-tool
     ####   /go/src/bitbucket.org/circleci/go-tool
-    working_directory: /go/src/github.com/Hao1995/Docker-Example
     steps:
       - checkout
       - setup_remote_docker
@@ -29,7 +30,7 @@ jobs:
           name: Push application Docker image
           command: |
             docker login -u $DOCKER_HUB_USER_ID -p $DOCKER_HUB_PWD
-            docker tag docker_example $DOCKER_HUB_USER_ID/docker-example:$CIRCLE_SHA1
-            docker tag docker_example $DOCKER_HUB_USER_ID/docker-example:latest
+            docker tag dockerexample_myapp $DOCKER_HUB_USER_ID/docker-example:$CIRCLE_SHA1
+            docker tag dockerexample_myapp $DOCKER_HUB_USER_ID/docker-example:latest
             docker push $DOCKER_HUB_USER_ID/docker-example:$CIRCLE_SHA1
             docker push $DOCKER_HUB_USER_ID/docker-example:latest
