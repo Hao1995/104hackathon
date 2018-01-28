@@ -21,3 +21,11 @@ jobs:
       # specify any bash command here prefixed with `run: `
       - run: go get -v -t -d ./...
       - run: go test -v ./...
+
+      - depoly:
+        name: Push application Docker image
+        command: |
+          docker login -e $DOCKER_HUB_EMAIL -u $DOCKER_HUB_USER_ID -P $DOCKER_HUB_PWD
+          docker tag docker_example $DOCKER_HUB_USER_ID/Docker-Example:$CIRCLE_SHA1
+          docker tag docker_example $DOCKER_HUB_USER_ID/Docker-Example:latest
+          docker push $DOCKER_HUB_USER_ID/Docker-Example:$CIRCLE_SHA1
