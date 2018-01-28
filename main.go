@@ -18,6 +18,15 @@ var dberr error
 func init() {
 	db, dberr = sql.Open("mysql", "root:password@tcp(localhost:3306)/users")
 	chechkErr(dberr)
+
+	_, dberr = db.Exec("CREATE DATABASE users")
+	chechkErr(dberr)
+
+	_, dberr = db.Exec("USE users")
+	chechkErr(dberr)
+
+	_, dberr = db.Exec("CREATE TABLE users ( id INT NOT NULL AUTO_INCREMENT, name VARCHAR(20), message VARCHAR(200), PRIMARY KEY (id))")
+	chechkErr(dberr)
 }
 
 func main() {
