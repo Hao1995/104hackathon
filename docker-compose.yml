@@ -7,11 +7,15 @@ services:
     restart: always
     environment:
         MYSQL_DATABASE: "users"
-        MYSQL_ROOT_PASSWORD: hao825_MDL7519
+        MYSQL_ROOT_PASSWORD: password
+    ports:
+      - 3306:3306
+    volumes:
+      - ./db-dump:/docker-entrypoint-initdb.d
 
   myapp:
     build: .
     ports:
-      - 8080:8080
+      - 80:8080
     links:
-      - db
+        - db
