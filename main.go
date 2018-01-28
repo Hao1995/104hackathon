@@ -16,7 +16,7 @@ var db *sql.DB
 var dberr error
 
 func init() {
-	db, dberr = sql.Open("mysql", "root:password@tcp(localhost:3306)/")
+	db, dberr = sql.Open("mysql", "root:password@tcp(db:3306)/")
 	// db, dberr = sql.Open("mysql", "root:hao825_MDL7519@tcp(localhost:3306)/")
 	chechkErr(dberr)
 
