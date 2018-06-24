@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 
+	"docker-example/config"
+
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -16,8 +18,8 @@ var db *sql.DB
 var dberr error
 
 func init() {
-	db, dberr = sql.Open("mysql", "root:password@tcp(localhost:3306)/")
-	// db, dberr = sql.Open("mysql", "root:hao825_MDL7519@tcp(localhost:3306)/")
+	// db, dberr = sql.Open([driver name], "[user name]:[user password]@tcp([mysql host])/")
+	db, dberr = sql.Open("mysql", config.CfgData.Mysql.User+":"+config.CfgData.Mysql.Password+"@tcp("+config.CfgData.Mysql.Host+":"+config.CfgData.Mysql.Port+")/") //HP
 	chechkErr(dberr)
 
 	_, dberr = db.Exec("CREATE DATABASE IF NOT EXISTS users")
@@ -100,6 +102,7 @@ func Create(res http.ResponseWriter, req *http.Request) {
 
 func chechkErr(err error) {
 	if err != nil {
-		panic(err)
+		// panic(err)
+		fmt.Println("[ERROR] ", err)
 	}
 }
