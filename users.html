@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Docker-Example</title>
+</head>
+
+<body>
+    <h2>Read All Users</h2>
+    <div>
+        <a href="/">Homepage</a>
+    </div>
+    <div>   
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Message</th>
+            </tr>
+            {{range .Users}}
+                <tr>
+                    <td>{{.Id}}</td>
+                    <td>{{.Name}}</td>
+                    <td>{{.Message}}</td>
+                </tr> 
+            {{end}}
+        </table>
+    </div>
+</body>
+
+</html>

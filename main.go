@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"strings"
 
@@ -22,19 +24,25 @@ func init() {
 	db, dberr = sql.Open("mysql", config.CfgData.Mysql.User+":"+config.CfgData.Mysql.Password+"@tcp("+config.CfgData.Mysql.Host+":"+config.CfgData.Mysql.Port+")/") //HP
 	chechkErr(dberr)
 
-	_, dberr = db.Exec("CREATE DATABASE IF NOT EXISTS users")
-	chechkErr(dberr)
+	sqlFiles, err := ioutil.ReadFile("./sql/init.sql")
+	if err != nil {
+		log.Fatalf(": %s", err)
+	}
 
-	_, dberr = db.Exec("USE users")
-	chechkErr(dberr)
+	splitSQLFiles := strings.Split(string(sqlFiles), ";\n")
 
-	_, dberr = db.Exec("CREATE TABLE IF NOT EXISTS users ( id INT NOT NULL AUTO_INCREMENT, name VARCHAR(20), message VARCHAR(200), PRIMARY KEY (id))")
-	chechkErr(dberr)
+	for _, v := range splitSQLFiles {
+		fmt.Println(v)
+		_, dberr = db.Exec(v)
+		chechkErr(dberr)
+	}
 }
 
 func main() {
 	http.HandleFunc("/", index)
-	http.HandleFunc("/read", Read)
+	http.HandleFunc("/read/users", Read)
+	http.HandleFunc("/read/users/json", ReadByJson)
+
 	http.HandleFunc("/create", Create)
 	http.ListenAndServe(":8080", nil)
 }
@@ -43,39 +51,56 @@ func index(res http.ResponseWriter, req *http.Request) {
 	t, _ := template.ParseFiles("index.html")
 	t.Execute(res, req)
 }
-func Read(res http.ResponseWriter, req *http.Request) {
+
+type User struct {
+	Id, Message, Name string
+}
+
+func ReadByJson(res http.ResponseWriter, req *http.Request) {
 	rows, err := db.Query("SELECT * FROM users")
 
-	columns, err := rows.Columns()
-	chechkErr(err)
-	values := make([]sql.RawBytes, len(columns))
-	scanArgs := make([]interface{}, len(values))
-	tableDatas := make([]map[string]interface{}, 0)
-	for i := range values {
-		scanArgs[i] = &values[i]
-	}
+	users := []*User{}
 
 	for rows.Next() {
-		err = rows.Scan(scanArgs...)
-		chechkErr(err)
-		tableData := make(map[string]interface{})
+		r := &User{}
 
-		for i, col := range values {
-			var value interface{}
-			if col == nil {
-				value = "NULL"
-			} else {
-				value = string(col)
-			}
-			tableData[columns[i]] = value
-		}
-		tableDatas = append(tableDatas, tableData)
+		err = rows.Scan(&r.Id, &r.Name, &r.Message)
+		chechkErr(err)
+		users = append(users, r)
 	}
 
-	jsonData, err := json.Marshal(tableDatas)
-	chechkErr(err)
-	fmt.Println(string(jsonData))
+	jsonData, err := json.Marshal(users)
+	if err != nil {
+		chechkErr(err)
+	}
 	io.WriteString(res, string(jsonData))
+}
+
+type Todo struct {
+	Title string
+	Done  bool
+}
+type TodoPageData struct {
+	Todos []Todo
+}
+
+func Read(res http.ResponseWriter, req *http.Request) {
+	tmpl := template.Must(template.ParseFiles("users.html"))
+
+	rows, err := db.Query("SELECT * FROM users")
+
+	data := struct {
+		Users []*User
+	}{}
+
+	for rows.Next() {
+		r := &User{}
+
+		err = rows.Scan(&r.Id, &r.Name, &r.Message)
+		chechkErr(err)
+		data.Users = append(data.Users, r)
+	}
+	tmpl.Execute(res, data)
 }
 
 func Create(res http.ResponseWriter, req *http.Request) {
@@ -102,7 +127,6 @@ func Create(res http.ResponseWriter, req *http.Request) {
 
 func chechkErr(err error) {
 	if err != nil {
-		// panic(err)
 		fmt.Println("[ERROR] ", err)
 	}
 }

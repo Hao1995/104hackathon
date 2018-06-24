@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 
@@ -30,11 +29,8 @@ func init() {
 		log.Fatalf("Failed to read app.conf file: %s", err)
 	}
 
-	fmt.Println(string(appConf))
 	err = gcfg.ReadStringInto(&CfgData, string(appConf))
 	if err != nil {
 		log.Fatalf("Failed to parse gcfg data: %s", err)
 	}
-	fmt.Println(CfgData.Mysql.User)
-	fmt.Println(CfgData.Mysql.Password)
 }
