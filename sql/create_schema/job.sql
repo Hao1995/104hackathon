@@ -1,7 +1,7 @@
 CREATE TABLE `docker-example`.`job` (
   `custno` VARCHAR(40) NOT NULL,
   `jobno` INT UNSIGNED NULL,
-  `job` VARCHAR(20) NULL,
+  `job` TEXT NULL,
   `jobcat1` INT NULL,
   `jobcat2` INT NULL,
   `jobcat3` INT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE `docker-example`.`job` (
   `role_status` TINYINT UNSIGNED NULL,
   `s2` TINYINT NULL,
   `s3` TINYINT NULL,
-  `addrno` INT UNSIGNED NULL,
+  `addr_no` INT UNSIGNED NULL,
   `s9` TINYINT NULL,
   `need_emp` INT UNSIGNED NULL,
   `need_emp1` INT UNSIGNED NULL,

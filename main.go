@@ -17,8 +17,11 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-var db *sql.DB
-var dberr error
+var (
+	db       *sql.DB
+	dberr    error
+	FailFile []string
+)
 
 func init() {
 	// db, dberr = sql.Open([driver name], "[user name]:[user password]@tcp([mysql host])/")
@@ -30,7 +33,7 @@ func init() {
 		log.Fatalf(": %s", err)
 	}
 
-	splitSQLFiles := strings.Split(string(sqlFiles), ";\n")
+	splitSQLFiles := strings.Split(string(sqlFiles), ";")
 
 	for _, v := range splitSQLFiles {
 		fmt.Println(v)
@@ -42,33 +45,12 @@ func init() {
 func main() {
 	http.HandleFunc("/", index)
 	http.HandleFunc("/read/users/", Read)
-	http.HandleFunc("/read/users/json", ReadByJson)
+	http.HandleFunc("/read/users/json", ReadByJSON)
 
 	// http.HandleFunc("/create", Create)
 
 	http.HandleFunc("/insert", Insert)
 	http.ListenAndServe(":8080", nil)
-}
-
-//Insert User
-func Insert(res http.ResponseWriter, req *http.Request) {
-	raw, err := ioutil.ReadFile("./data/job-sample.json")
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-
-	replaceCommaRaw := strings.Replace(string(raw), "}", "},", -1)
-	c := []*model.Job{}
-	// json.Unmarshal(raw, &c)
-	// fmt.Println(replaceCommaRaw)
-	trimSuffixSpace := strings.TrimRight(replaceCommaRaw, " ")
-	trimSuffixComma := strings.TrimRight(trimSuffixSpace, ",")
-	addSquareBrackets := "[" + trimSuffixComma + "]"
-	json.Unmarshal([]byte(addSquareBrackets), &c)
-
-	fmt.Println(len(c))
-	fmt.Println(c)
 }
 
 func index(res http.ResponseWriter, req *http.Request) {
@@ -160,6 +142,58 @@ func Create(res http.ResponseWriter, req *http.Request) {
 
 	str := "<h1>Success Insert</h1> <h3>Name: " + user["name"].(string) + "</h3>" + "<h3>Message: " + user["message"].(string) + "</h3>" + "\n\n" + "<a href=\"/\">Come back to home page</a>"
 	io.WriteString(res, str)
+}
+
+//Insert User
+func Insert(res http.ResponseWriter, req *http.Request) {
+	directoryPath := "F:/gotool/src/test/test1"
+	files, err := ioutil.ReadDir(directoryPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	count := 0
+	for _, file := range files {
+		fileExtension := strings.Split(file.Name(), ".")
+		if len(fileExtension) == 2 {
+			if fileExtension[1] == "json" {
+				if count < 3 {
+					filePath := directoryPath + "/" + file.Name()
+					ParseJsonAndInsertToMySQL(filePath)
+					count++
+				} else {
+					break
+				}
+			}
+		}
+
+	}
+}
+
+//ParseJsonAndInsertToMySQL ...
+func ParseJsonAndInsertToMySQL(fileName string) {
+	raw, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	c := []*model.Job{}
+	err = json.Unmarshal(raw, &c)
+	if err != nil {
+		fmt.Println(err.Error())
+		FailFile = append(FailFile, fileName)
+		return
+	}
+
+	for _, v := range c {
+		insert, err := db.Prepare("INSERT INTO job() VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+		chechkErr(err)
+		_, err = insert.Exec(v.Custno, v.Jobno, v.Job, v.Jobcat1, v.Jobcat2, v.Jobcat3, v.Edu, v.SalaryLow, v.SalaryHigh, v.Role, v.Language1, v.Language2, v.Language3, v.Period, v.MajorCat, v.MajorCat2, v.MajorCat3, v.Industry, v.Worktime, v.RoleStatus, v.S2, v.S3, v.Addrno, v.S9, v.NeedEmp, v.NeedEmp1, v.Startby, v.ExpJobcat1, v.ExpJobcat2, v.ExpJobcat3, v.Description, v.Others)
+		if err != nil {
+			fmt.Printf("[ERROR][%v][%v] Content :%v \n", fileName, err, *v)
+		}
+	}
 }
 
 func chechkErr(err error) {
