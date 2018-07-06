@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"docker-example/config"
+	"docker-example/model"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -40,11 +41,34 @@ func init() {
 
 func main() {
 	http.HandleFunc("/", index)
-	http.HandleFunc("/read/users", Read)
+	http.HandleFunc("/read/users/", Read)
 	http.HandleFunc("/read/users/json", ReadByJson)
 
-	http.HandleFunc("/create", Create)
+	// http.HandleFunc("/create", Create)
+
+	http.HandleFunc("/insert", Insert)
 	http.ListenAndServe(":8080", nil)
+}
+
+//Insert User
+func Insert(res http.ResponseWriter, req *http.Request) {
+	raw, err := ioutil.ReadFile("./data/job-sample.json")
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	replaceCommaRaw := strings.Replace(string(raw), "}", "},", -1)
+	c := []*model.Job{}
+	// json.Unmarshal(raw, &c)
+	// fmt.Println(replaceCommaRaw)
+	trimSuffixSpace := strings.TrimRight(replaceCommaRaw, " ")
+	trimSuffixComma := strings.TrimRight(trimSuffixSpace, ",")
+	addSquareBrackets := "[" + trimSuffixComma + "]"
+	json.Unmarshal([]byte(addSquareBrackets), &c)
+
+	fmt.Println(len(c))
+	fmt.Println(c)
 }
 
 func index(res http.ResponseWriter, req *http.Request) {
@@ -52,11 +76,13 @@ func index(res http.ResponseWriter, req *http.Request) {
 	t.Execute(res, req)
 }
 
+//User Model
 type User struct {
 	Id, Message, Name string
 }
 
-func ReadByJson(res http.ResponseWriter, req *http.Request) {
+// ReadByJSON ...
+func ReadByJSON(res http.ResponseWriter, req *http.Request) {
 	rows, err := db.Query("SELECT * FROM users")
 
 	users := []*User{}
@@ -76,18 +102,28 @@ func ReadByJson(res http.ResponseWriter, req *http.Request) {
 	io.WriteString(res, string(jsonData))
 }
 
-type Todo struct {
-	Title string
-	Done  bool
-}
-type TodoPageData struct {
-	Todos []Todo
-}
-
+//Read User
 func Read(res http.ResponseWriter, req *http.Request) {
 	tmpl := template.Must(template.ParseFiles("users.html"))
 
-	rows, err := db.Query("SELECT * FROM users")
+	id := strings.TrimPrefix(req.URL.Path, "/read/users/")
+	fmt.Println(id)
+
+	var rows *sql.Rows
+	var err error
+	if id != "" {
+		rows, err = db.Query("SELECT * FROM users WHERE id=?", id)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	} else {
+		rows, err = db.Query("SELECT * FROM users")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}
 
 	data := struct {
 		Users []*User
@@ -103,6 +139,7 @@ func Read(res http.ResponseWriter, req *http.Request) {
 	tmpl.Execute(res, data)
 }
 
+//Create User
 func Create(res http.ResponseWriter, req *http.Request) {
 
 	req.ParseForm()
