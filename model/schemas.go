@@ -35,3 +35,14 @@ type Job struct {
 	Description string `json:"description"`
 	Others      string `json:"others"`
 }
+
+//Company 公司
+type Company struct {
+	Custno     string `json:"custno"`
+	Invoice    int    `json:"invoice"`
+	Name       string `json:"name"`
+	Profile    string `json:"profile"`
+	Management string `json:"management"`
+	Welfare    string `json:"welfare"`
+	Product    string `json:"product"`
+}

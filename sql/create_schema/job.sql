@@ -30,6 +30,5 @@ CREATE TABLE `docker-example`.`job` (
   `exp_jobcat2` INT UNSIGNED NULL,
   `exp_jobcat3` INT UNSIGNED NULL,
   `description` TEXT NULL,
-  `others` TEXT NULL,
-  PRIMARY KEY (`custno`))
+  `others` TEXT NULL)
 ENGINE = InnoDB;
