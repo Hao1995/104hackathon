@@ -1,0 +1,7 @@
+CREATE TABLE `tag` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(20) NOT NULL UNIQUE COMMENT 'tag的名稱',
+  `score` SMALLINT NOT NULL UNIQUE COMMENT 'tag的名稱',
+  PRIMARY KEY (`id`)
+)
+ENGINE = InnoDB;

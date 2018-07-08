@@ -1,0 +1,12 @@
+CREATE TABLE `key_tag_score` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `key_id` INT NOT NULL,
+  `tag_id` INT NOT NULL,
+  `score` INT NOT NULL COMMENT '此關鍵字的平均分數',
+  PRIMARY KEY (`id`),
+  CONSTRAINT FK_QueryKey_key FOREIGN KEY (`key_id`) 
+  REFERENCES `query_key`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT FK_Tag_tag FOREIGN KEY (`tag_id`) 
+  REFERENCES `tag`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
+)
+ENGINE = InnoDB;

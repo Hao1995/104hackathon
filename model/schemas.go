@@ -46,3 +46,22 @@ type Company struct {
 	Welfare    string `json:"welfare"`
 	Product    string `json:"product"`
 }
+
+//TrainClick 公司
+type TrainClick struct {
+	Action      string   `json:"action"`
+	Jobno       string   `json:"jobno"`
+	Date        string   `json:"date"`
+	Joblist     []string `json:"joblist"`
+	QueryString string   `json:"querystring"`
+	Source      string   `json:"source"`
+}
+
+//TrainAction ...
+type TrainAction struct {
+	Action string `json:"action"`
+	Jobno  string `json:"jobno"`
+	Date   string `json:"date"`
+	Source string `json:"source"`
+	Device string `json:"device"`
+}
