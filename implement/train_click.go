@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -57,6 +58,7 @@ func HackathonTrainClick(res http.ResponseWriter, req *http.Request) {
 func QueryKey(res http.ResponseWriter, req *http.Request) {
 
 	//=====Get Total
+	fmt.Println("===== Get Total")
 	rows, err := db.Query("SELECT COUNT(1) FROM `train_click`")
 	if err != nil {
 		log.Errorf(err.Error())
@@ -74,47 +76,93 @@ func QueryKey(res http.ResponseWriter, req *http.Request) {
 	}
 
 	//=====Get OriginQueryString
-	offset := 0
-	size := 1000
-
+	fmt.Println("===== Get OriginQueryString")
+	offset := 387092
+	size := 10000
 	type OriginQueryString struct {
 		ID          int    `json:"id"`
 		QueryString string `json:"querystring"`
 	}
-	query :=
-		"SELECT `id`, `querystring` FROM `train_click` " +
-			"ORDER BY `id` " +
-			"LIMIT " + strconv.Itoa(size) + " " +
-			"OFFSET " + strconv.Itoa(offset)
 
-	rows, err = db.Query(query)
-	if err != nil {
-		log.Errorf(err.Error())
-	}
+	for {
+		query :=
+			"SELECT `id`, `querystring` FROM `train_click` " +
+				"ORDER BY `id` " +
+				"LIMIT " + strconv.Itoa(size) + " " +
+				"OFFSET " + strconv.Itoa(offset)
 
-	originDatas := []OriginQueryString{}
-	for rows.Next() {
-
-		var id int
-		var queryString string
-		if err := rows.Scan(&id, &queryString); err != nil {
+		rows, err = db.Query(query)
+		if err != nil {
 			log.Errorf(err.Error())
-			continue
 		}
 
-		originData := OriginQueryString{
-			ID:          id,
-			QueryString: queryString,
+		originDatas := []OriginQueryString{}
+		for rows.Next() {
+
+			var id int
+			var queryString string
+			if err := rows.Scan(&id, &queryString); err != nil {
+				log.Errorf(err.Error())
+				continue
+			}
+
+			originData := OriginQueryString{
+				ID:          id,
+				QueryString: queryString,
+			}
+
+			originDatas = append(originDatas, originData)
+		}
+		if err := rows.Err(); err != nil {
+			log.Errorf(err.Error())
 		}
 
-		originDatas = append(originDatas, originData)
-	}
-	if err := rows.Err(); err != nil {
-		log.Errorf(err.Error())
-	}
+		//===== Decode
+		fmt.Println("===== Decode")
+		decodeKey := make(map[int]string)
+		for _, v := range originDatas {
+			if v.QueryString == "" {
+				continue
+			}
+			str := "localhost/?" + v.QueryString
+			u, err := url.Parse(str)
+			if err != nil {
+				log.Errorf(err.Error())
+			}
+			// fmt.Println(u.String())
 
-	//===== Decode. Then Insert
+			m, _ := url.ParseQuery(u.RawQuery)
+			if key, ok := m["keyword"]; ok {
+				// fmt.Println(key[0])
+				decodeKey[v.ID] = key[0]
+				continue
+			} else {
+				log.Errorf("'keyword' does not exist.")
+			}
+		}
 
+		//===== Insert
+		fmt.Println("===== Insert")
+		if len(decodeKey) > 0 {
+			for k, v := range decodeKey {
+				stmt, err := db.Prepare("UPDATE `train_click` SET `key`=? WHERE `id`= ?;")
+				if err != nil {
+					log.Errorf("[db.Prepare] " + err.Error())
+				}
+				_, err = stmt.Exec(v, k)
+				if err != nil {
+					log.Errorf("[stmt.Exec] " + err.Error())
+				}
+				stmt.Close()
+			}
+		}
+
+		offset = offset + size
+		if offset > count {
+			break
+		}
+	}
+	//===== Complete
 	io.WriteString(res, "Complete")
 }
 

@@ -21,6 +21,7 @@ func main() {
 	// http.HandleFunc("/insert/train_click", implement.InsertTrainClick)
 	// http.HandleFunc("/insert/train_action", InsertTrainAction)
 	http.HandleFunc("/104hackathon/train_click/sync/key", implement.QueryKey)
+	http.HandleFunc("/104hackathon/query_key/sync", implement.StoreQueryKey)
 
 	// http.HandleFunc("/test", implement.Test)
 	http.ListenAndServe(":8080", nil)

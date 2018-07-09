@@ -57,7 +57,7 @@ func ParseTrainAction(fileName string) {
 		fmt.Printf("[INFO] %v length : %v\n", fileName, len(c))
 		for _, v := range c {
 			// TrainActionInsert(fileName, v)
-			value := "(" + stringAddQuote(v.Action) + "," + stringAddQuote(v.Jobno) + "," + stringAddQuote(v.Date) + "," + stringAddQuote(v.Source) + "," + stringAddQuote(v.Device) + "),"
+			value := "(" + stringAddDoubleQuotation(v.Action) + "," + stringAddDoubleQuotation(v.Jobno) + "," + stringAddDoubleQuotation(v.Date) + "," + stringAddDoubleQuotation(v.Source) + "," + stringAddDoubleQuotation(v.Device) + "),"
 			queryString = queryString + value
 		}
 

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/go-sql-driver/mysql" //mysql
 )
 
 var (
@@ -20,6 +20,7 @@ var (
 
 	mu sync.Mutex
 
+	//FailFile Store fail file name. Then we can parse again for it.
 	FailFile []string
 )
 
@@ -42,9 +43,21 @@ func init() {
 	}
 }
 
-func stringAddQuote(str string) string {
+func stringAddDoubleQuotation(str string) string {
 	return "\"" + str + "\""
 }
+
+func stringAddSingleQuotation(str string) string {
+	return "'" + str + "'"
+}
+
+func processQuote(str string) string {
+	return strings.Replace(strings.Replace(str, "'", "\\'", -1), "\"", "\\\"", -1)
+}
+
+// func(str string) processQuote() string{
+// 	str
+// }
 
 func chechkErr(err error) {
 	if err != nil {
