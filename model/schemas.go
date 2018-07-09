@@ -65,3 +65,35 @@ type TrainAction struct {
 	Source string `json:"source"`
 	Device string `json:"device"`
 }
+
+//JobCategory ...
+type JobCategory struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Desc string `json:"desc"`
+	Hide string `json:"hide"`
+}
+
+//Department ...
+type Department struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Desc string `json:"desc"`
+	Hide string `json:"hide"`
+}
+
+//District ...
+type District struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Desc string `json:"desc"`
+	Hide string `json:"hide"`
+}
+
+//Industry ...
+type Industry struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Desc string `json:"desc"`
+	Hide string `json:"hide"`
+}

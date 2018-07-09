@@ -22,6 +22,10 @@ func main() {
 	// http.HandleFunc("/insert/train_action", InsertTrainAction)
 	http.HandleFunc("/104hackathon/train_click/sync/key", implement.QueryKey)
 	http.HandleFunc("/104hackathon/query_key/sync", implement.StoreQueryKey)
+	http.HandleFunc("/104hackathon/job_category/sync", implement.InsertJobCategory)
+	http.HandleFunc("/104hackathon/department/sync", implement.InsertDepartment)
+	http.HandleFunc("/104hackathon/district/sync", implement.InsertDistrict)
+	http.HandleFunc("/104hackathon/industry/sync", implement.InsertIndustry)
 
 	// http.HandleFunc("/test", implement.Test)
 	http.ListenAndServe(":8080", nil)
