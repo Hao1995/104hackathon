@@ -2,11 +2,12 @@ package implement
 
 import (
 	"database/sql"
-	"docker-example/model"
 	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/Hao1995/Docker-Example/model"
 )
 
 //HackathonCompanies ...

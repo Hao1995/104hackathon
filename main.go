@@ -4,7 +4,7 @@ import (
 	"html/template"
 	"net/http"
 
-	"docker-example/implement"
+	"github.com/Hao1995/Docker-Example/implement"
 )
 
 func main() {

@@ -1,7 +1,6 @@
 package implement
 
 import (
-	"docker-example/model"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,6 +8,8 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/Hao1995/Docker-Example/model"
 )
 
 //InsertTrainAction User

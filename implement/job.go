@@ -2,11 +2,12 @@ package implement
 
 import (
 	"database/sql"
-	"docker-example/model"
 	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/Hao1995/Docker-Example/model"
 )
 
 //HackathonJob ...
@@ -37,7 +38,7 @@ func HackathonJob(res http.ResponseWriter, req *http.Request) {
 	for rows.Next() {
 		r := &model.Job{}
 
-		err = rows.Scan(&r.Custno, &r.Jobno, &r.Job, &r.Jobcat1, &r.Jobcat2, &r.Jobcat3, &r.Edu, &r.SalaryLow, &r.SalaryHigh, &r.Role, &r.RoleStatus, &r.Language1, &r.Language2, &r.Language3, &r.Period, &r.MajorCat, &r.MajorCat2, &r.MajorCat3, &r.Industry, &r.Worktime, &r.RoleStatus, &r.S2, &r.S3, &r.Addrno, &r.S9, &r.NeedEmp, &r.NeedEmp1, &r.Startby, &r.ExpJobcat1, &r.ExpJobcat2, &r.ExpJobcat3, &r.Description, &r.Others)
+		err = rows.Scan(&r.Custno, &r.Jobno, &r.Job, &r.Jobcat1, &r.Jobcat2, &r.Jobcat3, &r.Edu, &r.SalaryLow, &r.SalaryHigh, &r.Role, &r.Language1, &r.Language2, &r.Language3, &r.Period, &r.MajorCat, &r.MajorCat2, &r.MajorCat3, &r.Industry, &r.Worktime, &r.RoleStatus, &r.S2, &r.S3, &r.Addrno, &r.S9, &r.NeedEmp, &r.NeedEmp1, &r.Startby, &r.ExpJobcat1, &r.ExpJobcat2, &r.ExpJobcat3, &r.Description, &r.Others)
 		chechkErr(err)
 		jobs = append(jobs, r)
 	}

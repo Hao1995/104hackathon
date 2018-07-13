@@ -2,12 +2,13 @@ package implement
 
 import (
 	"database/sql"
-	"docker-example/config"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"strings"
 	"sync"
+
+	"github.com/Hao1995/Docker-Example/config"
 
 	_ "github.com/go-sql-driver/mysql" //mysql
 )
