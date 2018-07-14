@@ -103,6 +103,7 @@ type Industry struct {
 //ScoreOriginData ...
 type ScoreOriginData struct {
 	Key            string `json:"key"`
+	JobNo          string `json:"jobno"`
 	JobName        string `json:"jobname"`
 	JobAction      string `json:"jobaction"`
 	CompanyName    string `json:"companyname"`
@@ -119,18 +120,34 @@ type JobKey struct {
 
 //JobScore ...
 type JobScore struct {
+	JobNo     string `json:"jobno"`
 	Job       string `json:"job"`
 	Key       string `json:"key"`
 	GoodScore int    `json:"goodscore"`
 	BadScore  int    `json:"badscore"`
+	Count     int
 }
 
 //AreaScore ...
 type AreaScore struct {
+	AddrNo    string `json:"addrno"`
 	Area      string `json:"area"`
 	Key       string `json:"key"`
 	GoodScore int    `json:"goodscore"`
 	BadScore  int    `json:"badscore"`
+	Count     int
+}
+
+//AreaJobScore ...
+type AreaJobScore struct {
+	AddrNo    string `json:"addrno"`
+	Area      string `json:"area"`
+	JobNo     string `json:"jobno"`
+	Job       string `json:"job"`
+	Key       string `json:"key"`
+	GoodScore int    `json:"goodscore"`
+	BadScore  int    `json:"badscore"`
+	Count     int
 }
 
 //QueryKey ...
@@ -139,6 +156,7 @@ type QueryKey struct {
 	Name      string `json:"name"`
 	GoodScore int    `json:"goodscore"`
 	BadScore  int    `json:"badscore"`
+	Count     int
 }
 
 //Tag ...
@@ -146,4 +164,20 @@ type Tag struct {
 	ID    int    `json:"id"`
 	Name  string `json:"name"`
 	Score int    `json:"score"`
+}
+
+type FinalReturn struct {
+	Country *FinalReturnCountry   `json:"country"`
+	JobList []*FinalReturnJobList `json:"jobList"`
+}
+
+type FinalReturnCountry struct {
+	GoodScore int `json:"goodScore"`
+	BadScore  int `json:"badScore"`
+}
+type FinalReturnJobList struct {
+	JobName    string `json:"jobName"`
+	JobCompany string `json:"jobCompany"`
+	GoodScore  int    `json:"goodScore"`
+	BadScore   int    `json:"badScore"`
 }

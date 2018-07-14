@@ -17,12 +17,38 @@ var (
 	areaScore     map[string]*model.AreaScore
 	jobScore      map[string]*model.JobScore
 	queryKeyScore map[string]*model.QueryKey
+
+	areaMappingId map[string]string
 )
 
 func init() {
 	areaScore = make(map[string]*model.AreaScore)
 	jobScore = make(map[string]*model.JobScore)
 	queryKeyScore = make(map[string]*model.QueryKey)
+
+	areaMappingId = make(map[string]string)
+
+	areaMappingId["6001001"] = "台北市"
+	areaMappingId["6001002"] = "新北市"
+	areaMappingId["6001003"] = "宜蘭縣"
+	areaMappingId["6001004"] = "基隆市"
+	areaMappingId["6001005"] = "桃園市"
+	areaMappingId["6001006"] = "新竹縣市"
+	areaMappingId["6001007"] = "苗栗縣"
+	areaMappingId["6001008"] = "台中市"
+	areaMappingId["6001009"] = "台中市(原台中縣)"
+	areaMappingId["6001010"] = "彰化縣"
+	areaMappingId["6001011"] = "南投縣"
+	areaMappingId["6001012"] = "雲林縣"
+	areaMappingId["6001013"] = "嘉義縣市"
+	areaMappingId["6001014"] = "台南市"
+	areaMappingId["6001015"] = "台南市(原台南縣)"
+	areaMappingId["6001016"] = "高雄市"
+	areaMappingId["6001017"] = "高雄市(原高雄縣)"
+	areaMappingId["6001018"] = "屏東縣"
+	areaMappingId["6001019"] = "台東縣"
+	areaMappingId["6001020"] = "花蓮縣"
+
 }
 
 //Score ...
@@ -39,35 +65,159 @@ func ScoreArea(res http.ResponseWriter, req *http.Request) {
 		switch k {
 		case "key":
 			params[k] = strings.Join(v, "")
+		case "countryId":
+			fmt.Println(v[0])
+			if _, ok := areaMappingId[v[0]]; ok {
+				params[k] = strings.Join(v, "")
+			}
 		}
 	}
 
 	var rows *sql.Rows
 	var err error
-	// if v, ok := params["size"]; ok {
-	// 	rows, err = db.Query("SELECT * FROM job LIMIT " + v.(string))
-	// } else {
+	if key, ok := params["key"]; ok {
+		if countryId, ok := params["countryId"]; ok {
+			rows, err = db.Query("SELECT `addr_no`, `area`, `jobno`, `job`,`key`, `good_score`, `bad_score` FROM `area_job_key_score` WHERE `area` = ? AND `key` = ?", countryId, key)
+		} else {
+			rows, err = db.Query("SELECT `addr_no`, `area`, `jobno`, `job`,`key`, `good_score`, `bad_score` FROM `area_job_key_score` WHERE `key` = ?", key)
+		}
 
-	area := ""
-	key := ""
-	rows, err = db.Query("select `area`,`key`,`good_score`,`bad_score` from `area_key_score` where `area` = ? and `key` =?", area, key)
-	// }
+		items := []*model.AreaJobScore{}
 
-	items := []*model.AreaScore{}
+		for rows.Next() {
+			r := &model.AreaJobScore{}
+			err = rows.Scan(&r.AddrNo, &r.Area, &r.JobNo, &r.Job, &r.Key, &r.GoodScore, &r.BadScore)
+			if err != nil {
+				log.Errorf(err.Error())
+			}
+			items = append(items, r)
+		}
 
-	for rows.Next() {
-		r := &model.AreaScore{}
+		finalReturn := &model.FinalReturn{}
+		finalReturnCountry := &model.FinalReturnCountry{}
+		finalReturnJobList := []*model.FinalReturnJobList{}
 
-		err = rows.Scan(&r.Area, &r.Key, &r.GoodScore, &r.BadScore)
-		chechkErr(err)
-		items = append(items, r)
+		areaGoodScore := 0
+		areaBadScore := 0
+
+		count := 0
+		for _, v := range items {
+			areaGoodScore = areaGoodScore + v.GoodScore
+			areaBadScore = areaBadScore + v.BadScore
+
+			finalReturnCountry.GoodScore = areaGoodScore
+			finalReturnCountry.BadScore = areaBadScore
+
+			finalReturnJobListItem := &model.FinalReturnJobList{}
+
+			finalReturnJobListItem.JobName = v.Job
+			finalReturnJobListItem.JobCompany = ""
+			finalReturnJobListItem.GoodScore = v.GoodScore
+			finalReturnJobListItem.BadScore = v.BadScore
+
+			finalReturnJobList = append(finalReturnJobList, finalReturnJobListItem)
+
+			count++
+		}
+
+		//=== PR
+		//total
+		total := 0
+		rows, err = db.Query("SELECT COUNT(1) FROM `docker-example`.`area_job_key_score`")
+		if err != nil {
+			log.Errorf(err.Error())
+		}
+		for rows.Next() {
+			// r := &model.AreaJobScore{}
+			err = rows.Scan(&total)
+			if err != nil {
+				log.Errorf(err.Error())
+			}
+		}
+
+		key := finalReturnCountry.GoodScore
+		goodTotal := 0
+		rows, err = db.Query("SELECT COUNT(1) FROM (SELECT * FROM `docker-example`.`area_job_key_score` WHERE 1 = 1 AND `good_score` >= ?) as `tmp`", key)
+		if err != nil {
+			log.Errorf(err.Error())
+		}
+		for rows.Next() {
+			err = rows.Scan(&goodTotal)
+			if err != nil {
+				log.Errorf(err.Error())
+			}
+		}
+		if total != 0 {
+			finalReturnCountry.GoodScore = goodTotal / total
+		} else {
+			finalReturnCountry.GoodScore = 0
+		}
+
+		key = finalReturnCountry.BadScore
+		badTotal := 0
+		rows, err = db.Query("SELECT COUNT(1) FROM (SELECT * FROM `docker-example`.`area_job_key_score` WHERE 1 = 1 AND `bad_score` <= ?) as `tmp`", key)
+		if err != nil {
+			log.Errorf(err.Error())
+		}
+		for rows.Next() {
+			err = rows.Scan(&badTotal)
+			if err != nil {
+				log.Errorf(err.Error())
+			}
+		}
+		if total != 0 {
+			finalReturnCountry.BadScore = badTotal / total
+		} else {
+			finalReturnCountry.BadScore = 0
+		}
+
+		for _, v := range finalReturnJobList {
+			key := v.GoodScore
+			goodTotal := 0
+			rows, err = db.Query("SELECT COUNT(1) FROM (SELECT * FROM `docker-example`.`area_job_key_score` WHERE 1 = 1 AND `good_score` >= ?) as `tmp`", key)
+			if err != nil {
+				log.Errorf(err.Error())
+			}
+			for rows.Next() {
+				err = rows.Scan(&goodTotal)
+				if err != nil {
+					log.Errorf(err.Error())
+				}
+			}
+			if total != 0 {
+				v.GoodScore = goodTotal / total
+			} else {
+				v.GoodScore = 0
+			}
+
+			key = v.BadScore
+			badTotal := 0
+			rows, err = db.Query("SELECT COUNT(1) FROM (SELECT * FROM `docker-example`.`area_job_key_score` WHERE 1 = 1 AND `bad_score` <= ?) as `tmp`", key)
+			for rows.Next() {
+				err = rows.Scan(&badTotal)
+				if err != nil {
+					log.Errorf(err.Error())
+				}
+			}
+			if total != 0 {
+				v.BadScore = badTotal / total
+			} else {
+				v.BadScore = 0
+			}
+		}
+
+		finalReturn.Country = finalReturnCountry
+		finalReturn.JobList = finalReturnJobList
+
+		jsonData, err := json.Marshal(finalReturn)
+		if err != nil {
+			log.Errorf(err.Error())
+		}
+		io.WriteString(res, string(jsonData))
+	} else {
+		io.WriteString(res, "Error")
 	}
 
-	jsonData, err := json.Marshal(items)
-	if err != nil {
-		chechkErr(err)
-	}
-	io.WriteString(res, string(jsonData))
 }
 
 //ScoreJob ...
