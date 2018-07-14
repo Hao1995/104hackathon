@@ -19,6 +19,7 @@ var (
 	dbConnentCount    int
 	dbConnentCountMax = 16382
 
+	wg sync.WaitGroup
 	mu sync.Mutex
 
 	//FailFile Store fail file name. Then we can parse again for it.

@@ -97,3 +97,53 @@ type Industry struct {
 	Desc string `json:"desc"`
 	Hide string `json:"hide"`
 }
+
+//=====Score
+
+//ScoreOriginData ...
+type ScoreOriginData struct {
+	Key            string `json:"key"`
+	JobName        string `json:"jobname"`
+	JobAction      string `json:"jobaction"`
+	CompanyName    string `json:"companyname"`
+	CompanyWelfare string `json:"companywelfare"`
+	DistrictID     string `json:"districtid"`
+	DistrictName   string `json:"districtname"`
+}
+
+//JobKey ...
+type JobKey struct {
+	Key string `json:"key"`
+	Job string `json:"job"`
+}
+
+//JobScore ...
+type JobScore struct {
+	Job       string `json:"job"`
+	Key       string `json:"key"`
+	GoodScore int    `json:"goodscore"`
+	BadScore  int    `json:"badscore"`
+}
+
+//AreaScore ...
+type AreaScore struct {
+	Area      string `json:"area"`
+	Key       string `json:"key"`
+	GoodScore int    `json:"goodscore"`
+	BadScore  int    `json:"badscore"`
+}
+
+//QueryKey ...
+type QueryKey struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	GoodScore int    `json:"goodscore"`
+	BadScore  int    `json:"badscore"`
+}
+
+//Tag ...
+type Tag struct {
+	ID    int    `json:"id"`
+	Name  string `json:"name"`
+	Score int    `json:"score"`
+}
