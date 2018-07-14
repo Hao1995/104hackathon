@@ -19,6 +19,8 @@ var (
 	queryKeyScore map[string]*model.QueryKey
 
 	areaMappingId map[string]string
+
+	PRMapping map[int]int
 )
 
 func init() {
@@ -49,6 +51,8 @@ func init() {
 	areaMappingId["6001019"] = "台東縣"
 	areaMappingId["6001020"] = "花蓮縣"
 
+	PRMapping = make(map[int]int)
+
 }
 
 //Score ...
@@ -77,7 +81,91 @@ func ScoreArea(res http.ResponseWriter, req *http.Request) {
 	var err error
 	if key, ok := params["key"]; ok {
 		if countryId, ok := params["countryId"]; ok {
-			rows, err = db.Query("SELECT `addr_no`, `area`, `jobno`, `job`,`key`, `good_score`, `bad_score` FROM `area_job_key_score` WHERE `area` = ? AND `key` = ?", countryId, key)
+			fmt.Println(countryId.(string))
+			fmt.Println("%")
+			countryIdStr := countryId.(string) + "%"
+			rows, err = db.Query("SELECT `addr_no`, `area`, `jobno`, `job`,`key`, `good_score`, `bad_score` FROM `area_job_key_score` WHERE `addr_no` like ? AND `key` = ?", countryIdStr, key)
+		} else {
+			rows, err = db.Query("SELECT `addr_no`, `area`, `jobno`, `job`,`key`, `good_score`, `bad_score` FROM `area_job_key_score` WHERE `key` = ?", key)
+		}
+
+		items := []*model.AreaJobScore{}
+
+		for rows.Next() {
+			r := &model.AreaJobScore{}
+			err = rows.Scan(&r.AddrNo, &r.Area, &r.JobNo, &r.Job, &r.Key, &r.GoodScore, &r.BadScore)
+			if err != nil {
+				log.Errorf(err.Error())
+			}
+			items = append(items, r)
+		}
+
+		finalReturn := &model.FinalReturn{}
+		finalReturnCountry := &model.FinalReturnCountry{}
+		finalReturnJobList := []*model.FinalReturnJobList{}
+
+		areaGoodScore := 0
+		areaBadScore := 0
+
+		count := 0
+		for _, v := range items {
+			areaGoodScore = areaGoodScore + v.GoodScore
+			areaBadScore = areaBadScore + v.BadScore
+
+			finalReturnCountry.GoodScore = areaGoodScore
+			finalReturnCountry.BadScore = areaBadScore
+
+			finalReturnJobListItem := &model.FinalReturnJobList{}
+
+			finalReturnJobListItem.JobName = v.Job
+			finalReturnJobListItem.JobCompany = ""
+			finalReturnJobListItem.GoodScore = v.GoodScore
+			finalReturnJobListItem.BadScore = v.BadScore
+
+			finalReturnJobList = append(finalReturnJobList, finalReturnJobListItem)
+
+			count++
+		}
+
+		finalReturn.Country = finalReturnCountry
+		finalReturn.JobList = finalReturnJobList
+
+		jsonData, err := json.Marshal(finalReturn)
+		if err != nil {
+			log.Errorf(err.Error())
+		}
+		io.WriteString(res, string(jsonData))
+	} else {
+		io.WriteString(res, "Error")
+	}
+
+}
+
+//SyncArea ...
+func SyncArea(res http.ResponseWriter, req *http.Request) {
+	//=====Params
+	req.ParseForm()
+	params := make(map[string]interface{})
+	for k, v := range req.Form {
+		switch k {
+		case "key":
+			params[k] = strings.Join(v, "")
+		case "countryId":
+			fmt.Println(v[0])
+			if _, ok := areaMappingId[v[0]]; ok {
+				params[k] = strings.Join(v, "")
+			}
+		}
+	}
+
+	var rows *sql.Rows
+	var err error
+	if key, ok := params["key"]; ok {
+		if countryId, ok := params["countryId"]; ok {
+			fmt.Println(countryId.(string))
+			fmt.Println("%")
+			countryIdStr := countryId.(string) + "%"
+			rows, err = db.Query("SELECT `addr_no`, `area`, `jobno`, `job`,`key`, `good_score`, `bad_score` FROM `area_job_key_score` WHERE `addr_no` like ? AND `key` = ?", countryIdStr, key)
 		} else {
 			rows, err = db.Query("SELECT `addr_no`, `area`, `jobno`, `job`,`key`, `good_score`, `bad_score` FROM `area_job_key_score` WHERE `key` = ?", key)
 		}
