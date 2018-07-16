@@ -13,7 +13,7 @@ import (
 
 	"github.com/Hao1995/Docker-Example/model"
 
-	"docker-example/log"
+	"github.com/Hao1995/Docker-Example/log"
 )
 
 //HackathonTrainClick ...

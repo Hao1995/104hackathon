@@ -172,8 +172,8 @@ type FinalReturn struct {
 }
 
 type FinalReturnCountry struct {
-	GoodScore int `json:"goodScore"`
-	BadScore  int `json:"badScore"`
+	GoodScore float64 `json:"goodScore"`
+	BadScore  float64 `json:"badScore"`
 }
 type FinalReturnJobList struct {
 	JobName    string `json:"jobName"`

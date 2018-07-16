@@ -28,7 +28,7 @@ func main() {
 	// http.HandleFunc("/104hackathon/industry/sync", implement.InsertIndustry)
 
 	http.HandleFunc("/104hackathon/score/area", implement.ScoreArea)
-	http.HandleFunc("/104hackathon/score/job", implement.ScoreJob)
+	// http.HandleFunc("/104hackathon/score/job", implement.ScoreJob)
 
 	// http.HandleFunc("/104hackathon/sync/jobkey", implement.SyncJobKey)
 	// http.HandleFunc("/test", implement.Test)

@@ -2,13 +2,15 @@ package implement
 
 import (
 	"database/sql"
-	"docker-example/log"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
+	"github.com/Hao1995/Docker-Example/log"
 	"github.com/Hao1995/Docker-Example/model"
 )
 
@@ -62,7 +64,15 @@ func Score(res http.ResponseWriter, req *http.Request) {
 
 //ScoreArea ...
 func ScoreArea(res http.ResponseWriter, req *http.Request) {
+
+	start := time.Now()
+
+	finalReturn := &model.FinalReturn{}
+	finalReturnCountry := &model.FinalReturnCountry{}
+	finalReturnJobList := []*model.FinalReturnJobList{}
+
 	//=====Params
+	fmt.Println("=== Parse Parameters")
 	req.ParseForm()
 	params := make(map[string]interface{})
 	for k, v := range req.Form {
@@ -70,62 +80,77 @@ func ScoreArea(res http.ResponseWriter, req *http.Request) {
 		case "key":
 			params[k] = strings.Join(v, "")
 		case "countryId":
-			fmt.Println(v[0])
 			if _, ok := areaMappingId[v[0]]; ok {
 				params[k] = strings.Join(v, "")
 			}
+		case "size":
+			params[k] = strings.Join(v, "")
+		case "page":
+			params[k] = strings.Join(v, "")
 		}
 	}
 
+	//=== Original Data From `area_job_key_score`
+	fmt.Println("=== Original Data From `area_job_key_score`")
 	var rows *sql.Rows
 	var err error
-	if key, ok := params["key"]; ok {
+
+	var countryIdStr, key interface{}
+	var ok bool
+	if key, ok = params["key"]; ok {
 		if countryId, ok := params["countryId"]; ok {
-			fmt.Println(countryId.(string))
-			fmt.Println("%")
-			countryIdStr := countryId.(string) + "%"
-			rows, err = db.Query("SELECT `addr_no`, `area`, `jobno`, `job`,`key`, `good_score`, `bad_score` FROM `area_job_key_score` WHERE `addr_no` like ? AND `key` = ?", countryIdStr, key)
-		} else {
-			rows, err = db.Query("SELECT `addr_no`, `area`, `jobno`, `job`,`key`, `good_score`, `bad_score` FROM `area_job_key_score` WHERE `key` = ?", key)
+			if size, ok := params["size"]; ok {
+				if page, ok := params["page"]; ok {
+					countryIdStr = countryId.(string) + "%"
+					sizeInt, err := strconv.Atoi(size.(string))
+					if err != nil {
+						log.Errorf(err.Error())
+					}
+					if sizeInt < 0 {
+						io.WriteString(res, "Parameter [size] can not be negative number.")
+					}
+					pageInt, err := strconv.Atoi(page.(string))
+					if err != nil {
+						log.Errorf(err.Error())
+					}
+					if pageInt < 0 {
+						io.WriteString(res, "Parameter [page] can not be negative number.")
+					}
+					offset := (pageInt - 1) * sizeInt
+
+					rows, err = db.Query("SELECT `job`, `good_score`, `bad_score` FROM `area_job_key_score` WHERE `addr_no` like ? AND `key` = ? GROUP BY `addr_no`,`jobno` LIMIT ? OFFSET ? ", countryIdStr, key, size, offset)
+				}
+			}
 		}
 
-		items := []*model.AreaJobScore{}
-
 		for rows.Next() {
-			r := &model.AreaJobScore{}
-			err = rows.Scan(&r.AddrNo, &r.Area, &r.JobNo, &r.Job, &r.Key, &r.GoodScore, &r.BadScore)
+			r := &model.FinalReturnJobList{}
+			err = rows.Scan(&r.JobName, &r.GoodScore, &r.BadScore)
 			if err != nil {
 				log.Errorf(err.Error())
 			}
-			items = append(items, r)
+			r.JobCompany = ""
+			finalReturnJobList = append(finalReturnJobList, r)
 		}
+		fmt.Printf("%s took %v\n", "Load data from `area_job_key_socre`", time.Since(start))
 
-		finalReturn := &model.FinalReturn{}
-		finalReturnCountry := &model.FinalReturnCountry{}
-		finalReturnJobList := []*model.FinalReturnJobList{}
+		//=== Average Data Of The Area
+		fmt.Println("=== Average Data Of The Area")
+		start = time.Now()
 
-		areaGoodScore := 0
-		areaBadScore := 0
+		rows, err = db.Query("SELECT AVG(`good_score`) AS `good_score`, AVG(`bad_score`) AS `bad_score` FROM ( SELECT `good_score`, `bad_score` FROM `area_job_key_score` WHERE `addr_no` LIKE ? AND `key` = ? GROUP BY `addr_no`,`jobno` ) AS `tmp`", countryIdStr, key)
 
-		count := 0
-		for _, v := range items {
-			areaGoodScore = areaGoodScore + v.GoodScore
-			areaBadScore = areaBadScore + v.BadScore
-
-			finalReturnCountry.GoodScore = areaGoodScore
-			finalReturnCountry.BadScore = areaBadScore
-
-			finalReturnJobListItem := &model.FinalReturnJobList{}
-
-			finalReturnJobListItem.JobName = v.Job
-			finalReturnJobListItem.JobCompany = ""
-			finalReturnJobListItem.GoodScore = v.GoodScore
-			finalReturnJobListItem.BadScore = v.BadScore
-
-			finalReturnJobList = append(finalReturnJobList, finalReturnJobListItem)
-
-			count++
+		for rows.Next() {
+			err = rows.Scan(&finalReturnCountry.GoodScore, &finalReturnCountry.BadScore)
+			if err != nil {
+				log.Errorf(err.Error())
+			}
 		}
+		fmt.Printf("%s took %v\n", "Average Data Of The Area", time.Since(start))
+
+		//=== Marshal Data to JSON
+		fmt.Println("=== Marshal Data to JSON")
+		start = time.Now()
 
 		finalReturn.Country = finalReturnCountry
 		finalReturn.JobList = finalReturnJobList
@@ -134,173 +159,7 @@ func ScoreArea(res http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			log.Errorf(err.Error())
 		}
-		io.WriteString(res, string(jsonData))
-	} else {
-		io.WriteString(res, "Error")
-	}
-
-}
-
-//SyncArea ...
-func SyncArea(res http.ResponseWriter, req *http.Request) {
-	//=====Params
-	req.ParseForm()
-	params := make(map[string]interface{})
-	for k, v := range req.Form {
-		switch k {
-		case "key":
-			params[k] = strings.Join(v, "")
-		case "countryId":
-			fmt.Println(v[0])
-			if _, ok := areaMappingId[v[0]]; ok {
-				params[k] = strings.Join(v, "")
-			}
-		}
-	}
-
-	var rows *sql.Rows
-	var err error
-	if key, ok := params["key"]; ok {
-		if countryId, ok := params["countryId"]; ok {
-			fmt.Println(countryId.(string))
-			fmt.Println("%")
-			countryIdStr := countryId.(string) + "%"
-			rows, err = db.Query("SELECT `addr_no`, `area`, `jobno`, `job`,`key`, `good_score`, `bad_score` FROM `area_job_key_score` WHERE `addr_no` like ? AND `key` = ?", countryIdStr, key)
-		} else {
-			rows, err = db.Query("SELECT `addr_no`, `area`, `jobno`, `job`,`key`, `good_score`, `bad_score` FROM `area_job_key_score` WHERE `key` = ?", key)
-		}
-
-		items := []*model.AreaJobScore{}
-
-		for rows.Next() {
-			r := &model.AreaJobScore{}
-			err = rows.Scan(&r.AddrNo, &r.Area, &r.JobNo, &r.Job, &r.Key, &r.GoodScore, &r.BadScore)
-			if err != nil {
-				log.Errorf(err.Error())
-			}
-			items = append(items, r)
-		}
-
-		finalReturn := &model.FinalReturn{}
-		finalReturnCountry := &model.FinalReturnCountry{}
-		finalReturnJobList := []*model.FinalReturnJobList{}
-
-		areaGoodScore := 0
-		areaBadScore := 0
-
-		count := 0
-		for _, v := range items {
-			areaGoodScore = areaGoodScore + v.GoodScore
-			areaBadScore = areaBadScore + v.BadScore
-
-			finalReturnCountry.GoodScore = areaGoodScore
-			finalReturnCountry.BadScore = areaBadScore
-
-			finalReturnJobListItem := &model.FinalReturnJobList{}
-
-			finalReturnJobListItem.JobName = v.Job
-			finalReturnJobListItem.JobCompany = ""
-			finalReturnJobListItem.GoodScore = v.GoodScore
-			finalReturnJobListItem.BadScore = v.BadScore
-
-			finalReturnJobList = append(finalReturnJobList, finalReturnJobListItem)
-
-			count++
-		}
-
-		//=== PR
-		//total
-		total := 0
-		rows, err = db.Query("SELECT COUNT(1) FROM `docker-example`.`area_job_key_score`")
-		if err != nil {
-			log.Errorf(err.Error())
-		}
-		for rows.Next() {
-			// r := &model.AreaJobScore{}
-			err = rows.Scan(&total)
-			if err != nil {
-				log.Errorf(err.Error())
-			}
-		}
-
-		key := finalReturnCountry.GoodScore
-		goodTotal := 0
-		rows, err = db.Query("SELECT COUNT(1) FROM (SELECT * FROM `docker-example`.`area_job_key_score` WHERE 1 = 1 AND `good_score` >= ?) as `tmp`", key)
-		if err != nil {
-			log.Errorf(err.Error())
-		}
-		for rows.Next() {
-			err = rows.Scan(&goodTotal)
-			if err != nil {
-				log.Errorf(err.Error())
-			}
-		}
-		if total != 0 {
-			finalReturnCountry.GoodScore = goodTotal / total
-		} else {
-			finalReturnCountry.GoodScore = 0
-		}
-
-		key = finalReturnCountry.BadScore
-		badTotal := 0
-		rows, err = db.Query("SELECT COUNT(1) FROM (SELECT * FROM `docker-example`.`area_job_key_score` WHERE 1 = 1 AND `bad_score` <= ?) as `tmp`", key)
-		if err != nil {
-			log.Errorf(err.Error())
-		}
-		for rows.Next() {
-			err = rows.Scan(&badTotal)
-			if err != nil {
-				log.Errorf(err.Error())
-			}
-		}
-		if total != 0 {
-			finalReturnCountry.BadScore = badTotal / total
-		} else {
-			finalReturnCountry.BadScore = 0
-		}
-
-		for _, v := range finalReturnJobList {
-			key := v.GoodScore
-			goodTotal := 0
-			rows, err = db.Query("SELECT COUNT(1) FROM (SELECT * FROM `docker-example`.`area_job_key_score` WHERE 1 = 1 AND `good_score` >= ?) as `tmp`", key)
-			if err != nil {
-				log.Errorf(err.Error())
-			}
-			for rows.Next() {
-				err = rows.Scan(&goodTotal)
-				if err != nil {
-					log.Errorf(err.Error())
-				}
-			}
-			if total != 0 {
-				v.GoodScore = goodTotal / total
-			} else {
-				v.GoodScore = 0
-			}
-
-			key = v.BadScore
-			badTotal := 0
-			rows, err = db.Query("SELECT COUNT(1) FROM (SELECT * FROM `docker-example`.`area_job_key_score` WHERE 1 = 1 AND `bad_score` <= ?) as `tmp`", key)
-			for rows.Next() {
-				err = rows.Scan(&badTotal)
-				if err != nil {
-					log.Errorf(err.Error())
-				}
-			}
-			if total != 0 {
-				v.BadScore = badTotal / total
-			} else {
-				v.BadScore = 0
-			}
-		}
-
-		finalReturn.Country = finalReturnCountry
-		finalReturn.JobList = finalReturnJobList
-
-		jsonData, err := json.Marshal(finalReturn)
-		if err != nil {
-			log.Errorf(err.Error())
-		}
+		fmt.Printf("%s took %v\n", "Marshal Data to JSON", time.Since(start))
 		io.WriteString(res, string(jsonData))
 	} else {
 		io.WriteString(res, "Error")
