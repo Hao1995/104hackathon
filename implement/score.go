@@ -65,6 +65,8 @@ func Score(res http.ResponseWriter, req *http.Request) {
 //ScoreArea ...
 func ScoreArea(res http.ResponseWriter, req *http.Request) {
 
+	res.Header().Set("Access-Control-Allow-Origin", "*")
+
 	start := time.Now()
 
 	finalReturn := &model.FinalReturn{}
@@ -90,8 +92,8 @@ func ScoreArea(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	//=== Original Data From `area_job_key_score`
-	fmt.Println("=== Original Data From `area_job_key_score`")
+	//=== Original Data From `docker-example`.`area_job_key_score`
+	fmt.Println("=== Original Data From `docker-example`.`area_job_key_score`")
 	var rows *sql.Rows
 	var err error
 
@@ -118,7 +120,7 @@ func ScoreArea(res http.ResponseWriter, req *http.Request) {
 					}
 					offset := (pageInt - 1) * sizeInt
 
-					rows, err = db.Query("SELECT `job`, `good_score`, `bad_score` FROM `area_job_key_score` WHERE `addr_no` like ? AND `key` = ? GROUP BY `addr_no`,`jobno` LIMIT ? OFFSET ? ", countryIdStr, key, size, offset)
+					rows, err = db.Query("SELECT `job`, `good_score`, `bad_score` FROM `docker-example`.`area_job_key_score` WHERE `addr_no` like ? AND `key` = ? GROUP BY `addr_no`,`jobno` LIMIT ? OFFSET ? ", countryIdStr, key, size, offset)
 				}
 			}
 		}
@@ -138,7 +140,7 @@ func ScoreArea(res http.ResponseWriter, req *http.Request) {
 		fmt.Println("=== Average Data Of The Area")
 		start = time.Now()
 
-		rows, err = db.Query("SELECT AVG(`good_score`) AS `good_score`, AVG(`bad_score`) AS `bad_score` FROM ( SELECT `good_score`, `bad_score` FROM `area_job_key_score` WHERE `addr_no` LIKE ? AND `key` = ? GROUP BY `addr_no`,`jobno` ) AS `tmp`", countryIdStr, key)
+		rows, err = db.Query("SELECT AVG(`good_score`) AS `good_score`, AVG(`bad_score`) AS `bad_score` FROM ( SELECT `good_score`, `bad_score` FROM `docker-example`.`area_job_key_score` WHERE `addr_no` LIKE ? AND `key` = ? GROUP BY `addr_no`,`jobno` ) AS `tmp`", countryIdStr, key)
 
 		for rows.Next() {
 			err = rows.Scan(&finalReturnCountry.GoodScore, &finalReturnCountry.BadScore)
