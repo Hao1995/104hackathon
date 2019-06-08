@@ -1,4 +1,4 @@
-package implement
+package controller
 
 import (
 	"database/sql"
@@ -57,15 +57,11 @@ func init() {
 
 }
 
-//Score ...
-func Score(res http.ResponseWriter, req *http.Request) {
-	io.WriteString(res, "test")
-}
-
 //ScoreArea ...
 func ScoreArea(res http.ResponseWriter, req *http.Request) {
 
 	res.Header().Set("Access-Control-Allow-Origin", "*")
+	res.Header().Set("Content-Type", "application/json")
 
 	start := time.Now()
 
@@ -81,7 +77,7 @@ func ScoreArea(res http.ResponseWriter, req *http.Request) {
 		switch k {
 		case "key":
 			params[k] = strings.Join(v, "")
-		case "countryId":
+		case "country_id":
 			if _, ok := areaMappingId[v[0]]; ok {
 				params[k] = strings.Join(v, "")
 			}
@@ -92,81 +88,93 @@ func ScoreArea(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	//=== Original Data From `104hackathon`.`area_job_key_score`
-	fmt.Println("=== Original Data From `104hackathon`.`area_job_key_score`")
+	key, ok := params["key"]
+	if !ok {
+		io.WriteString(res, "Parameter 'key' is necessary.")
+		return
+	}
+
+	countryID, ok := params["country_id"]
+	if !ok {
+		io.WriteString(res, "Parameter 'key' is necessary.")
+		return
+	}
+
+	size, ok := params["size"]
+	if !ok {
+		io.WriteString(res, "Parameter 'key' is necessary.")
+		return
+	}
+
+	page, ok := params["page"]
+	if !ok {
+		io.WriteString(res, "Parameter 'key' is necessary.")
+		return
+	}
+
+	//=== Original Data From `104hackathon-welfare`.`area_job_key_score`
+	fmt.Println("=== Original Data From `104hackathon-welfare`.`area_job_key_score`")
 	var rows *sql.Rows
 	var err error
 
-	var countryIdStr, key interface{}
-	var ok bool
-	if key, ok = params["key"]; ok {
-		if countryId, ok := params["countryId"]; ok {
-			if size, ok := params["size"]; ok {
-				if page, ok := params["page"]; ok {
-					countryIdStr = countryId.(string) + "%"
-					sizeInt, err := strconv.Atoi(size.(string))
-					if err != nil {
-						log.Errorf(err.Error())
-					}
-					if sizeInt < 0 {
-						io.WriteString(res, "Parameter [size] can not be negative number.")
-					}
-					pageInt, err := strconv.Atoi(page.(string))
-					if err != nil {
-						log.Errorf(err.Error())
-					}
-					if pageInt < 0 {
-						io.WriteString(res, "Parameter [page] can not be negative number.")
-					}
-					offset := (pageInt - 1) * sizeInt
+	countryIDStr := countryID.(string) + "%"
+	sizeInt, err := strconv.Atoi(size.(string))
+	if err != nil {
+		log.Errorf(err.Error())
+	}
+	if sizeInt < 0 {
+		io.WriteString(res, "Parameter [size] can not be negative number.")
+	}
+	pageInt, err := strconv.Atoi(page.(string))
+	if err != nil {
+		log.Errorf(err.Error())
+	}
+	if pageInt < 0 {
+		io.WriteString(res, "Parameter [page] can not be negative number.")
+	}
+	offset := (pageInt - 1) * sizeInt
 
-					rows, err = db.Query("SELECT `job`, `good_score`, `bad_score` FROM `104hackathon`.`area_job_key_score` WHERE `addr_no` like ? AND `key` = ? GROUP BY `addr_no`,`jobno` LIMIT ? OFFSET ? ", countryIdStr, key, size, offset)
-				}
-			}
-		}
+	rows, err = db.Query("SELECT `job`, `good_score`, `bad_score` FROM `104hackathon-welfare`.`area_job_key_score` WHERE `addr_no` like ? AND `key` = ? GROUP BY `addr_no`,`jobno` LIMIT ? OFFSET ? ", countryIDStr, key, size, offset)
 
-		for rows.Next() {
-			r := &model.FinalReturnJobList{}
-			err = rows.Scan(&r.JobName, &r.GoodScore, &r.BadScore)
-			if err != nil {
-				log.Errorf(err.Error())
-			}
-			r.JobCompany = ""
-			finalReturnJobList = append(finalReturnJobList, r)
-		}
-		fmt.Printf("%s took %v\n", "Load data from `area_job_key_socre`", time.Since(start))
-
-		//=== Average Data Of The Area
-		fmt.Println("=== Average Data Of The Area")
-		start = time.Now()
-
-		rows, err = db.Query("SELECT AVG(`good_score`) AS `good_score`, AVG(`bad_score`) AS `bad_score` FROM ( SELECT `good_score`, `bad_score` FROM `104hackathon`.`area_job_key_score` WHERE `addr_no` LIKE ? AND `key` = ? GROUP BY `addr_no`,`jobno` ) AS `tmp`", countryIdStr, key)
-
-		for rows.Next() {
-			err = rows.Scan(&finalReturnCountry.GoodScore, &finalReturnCountry.BadScore)
-			if err != nil {
-				log.Errorf(err.Error())
-			}
-		}
-		fmt.Printf("%s took %v\n", "Average Data Of The Area", time.Since(start))
-
-		//=== Marshal Data to JSON
-		fmt.Println("=== Marshal Data to JSON")
-		start = time.Now()
-
-		finalReturn.Country = finalReturnCountry
-		finalReturn.JobList = finalReturnJobList
-
-		jsonData, err := json.Marshal(finalReturn)
+	for rows.Next() {
+		r := &model.FinalReturnJobList{}
+		err = rows.Scan(&r.JobName, &r.GoodScore, &r.BadScore)
 		if err != nil {
 			log.Errorf(err.Error())
 		}
-		fmt.Printf("%s took %v\n", "Marshal Data to JSON", time.Since(start))
-		io.WriteString(res, string(jsonData))
-	} else {
-		io.WriteString(res, "Error")
+		r.JobCompany = ""
+		finalReturnJobList = append(finalReturnJobList, r)
 	}
+	fmt.Printf("%s took %v\n", "Load data from `area_job_key_socre`", time.Since(start))
 
+	//=== Average Data Of The Area
+	fmt.Println("=== Average Data Of The Area")
+	start = time.Now()
+
+	rows, err = db.Query("SELECT AVG(`good_score`) AS `good_score`, AVG(`bad_score`) AS `bad_score` FROM ( SELECT `good_score`, `bad_score` FROM `104hackathon-welfare`.`area_job_key_score` WHERE `addr_no` LIKE ? AND `key` = ? GROUP BY `addr_no`,`jobno` ) AS `tmp`", countryIDStr, key)
+
+	for rows.Next() {
+		err = rows.Scan(&finalReturnCountry.GoodScore, &finalReturnCountry.BadScore)
+		if err != nil {
+			log.Errorf(err.Error())
+		}
+	}
+	fmt.Printf("%s took %v\n", "Average Data Of The Area", time.Since(start))
+
+	//=== Marshal Data to JSON
+	fmt.Println("=== Marshal Data to JSON")
+	start = time.Now()
+
+	finalReturn.Country = finalReturnCountry
+	finalReturn.JobList = finalReturnJobList
+
+	jsonData, err := json.Marshal(finalReturn)
+	if err != nil {
+		log.Errorf(err.Error())
+	}
+	fmt.Printf("%s took %v\n", "Marshal Data to JSON", time.Since(start))
+	io.WriteString(res, string(jsonData))
+	return
 }
 
 //ScoreJob ...

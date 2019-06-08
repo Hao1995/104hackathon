@@ -1,4 +1,4 @@
-package implement
+package controller
 
 import (
 	"encoding/csv"
@@ -10,10 +10,10 @@ import (
 	"github.com/Hao1995/104hackathon/log"
 )
 
-//InsertDistrict ... Store Data
-func InsertDistrict(res http.ResponseWriter, req *http.Request) {
+//InsertJobCategory ... Store Data
+func InsertJobCategory(res http.ResponseWriter, req *http.Request) {
 
-	filename := "C:/Users/user/Downloads/104Hackathon/category/district.csv"
+	filename := "C:/Users/user/Downloads/104Hackathon/category/job_category.csv"
 
 	// Open CSV file
 	f, err := os.Open(filename)
@@ -31,7 +31,7 @@ func InsertDistrict(res http.ResponseWriter, req *http.Request) {
 	lines = lines[1:len(lines)] //First line is title
 	for _, line := range lines {
 
-		queryString := "INSERT INTO `district`(`id`,`name`,`desc`,`hide`) VALUES"
+		queryString := "INSERT INTO job_category(`id`,`name`,`desc`,`hide`) VALUES"
 		value :=
 			"(" +
 				stringAddSingleQuotation(processQuote(line[0])) + "," +

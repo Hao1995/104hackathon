@@ -1,4 +1,4 @@
-CREATE TABLE `104hackathon`.`train_click` (
+CREATE TABLE `104hackathon-welfare`.`train_click` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `action` VARCHAR(20) NOT NULL COMMENT '瀏覽104時的行為記錄',
   `jobno` VARCHAR(10) NULL COMMENT '職務代碼',

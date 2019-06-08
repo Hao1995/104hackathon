@@ -1,4 +1,4 @@
-CREATE TABLE `104hackathon`.`companies` (
+CREATE TABLE `104hackathon-welfare`.`companies` (
   `custno` VARCHAR(40) NOT NULL COMMENT '公司代碼',
   `invoice` INT UNSIGNED NULL COMMENT '公司統編',
   `name` VARCHAR(200) NULL COMMENT '公司名稱',
