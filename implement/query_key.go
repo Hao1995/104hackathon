@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Hao1995/Docker-Example/log"
+	"github.com/Hao1995/104hackathon/log"
 )
 
 //StoreQueryKey ...

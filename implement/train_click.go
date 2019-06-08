@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Hao1995/Docker-Example/model"
+	"github.com/Hao1995/104hackathon/model"
 
-	"github.com/Hao1995/Docker-Example/log"
+	"github.com/Hao1995/104hackathon/log"
 )
 
 //HackathonTrainClick ...

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Hao1995/Docker-Example/model"
+	"github.com/Hao1995/104hackathon/model"
 )
 
 //HackathonCompanies ...

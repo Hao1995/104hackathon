@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Hao1995/Docker-Example/config"
+	"github.com/Hao1995/104hackathon/config"
 
 	_ "github.com/go-sql-driver/mysql" //mysql
 )

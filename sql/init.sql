@@ -1,5 +1,5 @@
-CREATE DATABASE IF NOT EXISTS `docker-example`;
-USE `docker-example`;
+CREATE DATABASE IF NOT EXISTS `104hackathon`;
+USE `104hackathon`;
 
 CREATE TABLE IF NOT EXISTS `users` ( 
     `id` INT NOT NULL AUTO_INCREMENT, 

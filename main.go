@@ -4,10 +4,12 @@ import (
 	"html/template"
 	"net/http"
 
-	"github.com/Hao1995/Docker-Example/implement"
+	"github.com/Hao1995/104hackathon/implement"
 )
 
 func main() {
+
+	// - API for frontend
 	http.HandleFunc("/", index)
 	http.HandleFunc("/read/users/", implement.Read)
 	http.HandleFunc("/read/users/json", implement.ReadByJSON)

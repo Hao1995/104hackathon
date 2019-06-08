@@ -1,4 +1,4 @@
-CREATE TABLE `docker-example`.`job` (
+CREATE TABLE `104hackathon`.`job` (
   `custno` VARCHAR(40) NOT NULL,
   `jobno` INT UNSIGNED NULL,
   `job` TEXT NULL,
