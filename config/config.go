@@ -15,6 +15,9 @@ type Cfg struct {
 		Host     string
 		Port     string
 	}
+	Logs struct {
+		Level int
+	}
 }
 
 //CfgData : Can be use by other package

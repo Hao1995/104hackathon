@@ -3,12 +3,17 @@ package controller
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
 	"github.com/Hao1995/104hackathon/model"
 )
+
+func Test() {
+	fmt.Println("controller")
+}
 
 //HackathonJob ...
 func HackathonJob(res http.ResponseWriter, req *http.Request) {

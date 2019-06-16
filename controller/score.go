@@ -57,7 +57,8 @@ func init() {
 
 }
 
-//ScoreArea ...
+// ScoreArea :
+// The score of this job in a certain area.
 func ScoreArea(res http.ResponseWriter, req *http.Request) {
 
 	res.Header().Set("Access-Control-Allow-Origin", "*")
@@ -69,7 +70,7 @@ func ScoreArea(res http.ResponseWriter, req *http.Request) {
 	finalReturnCountry := &model.FinalReturnCountry{}
 	finalReturnJobList := []*model.FinalReturnJobList{}
 
-	//=====Params
+	// - Params
 	fmt.Println("=== Parse Parameters")
 	req.ParseForm()
 	params := make(map[string]interface{})
@@ -175,46 +176,6 @@ func ScoreArea(res http.ResponseWriter, req *http.Request) {
 	fmt.Printf("%s took %v\n", "Marshal Data to JSON", time.Since(start))
 	io.WriteString(res, string(jsonData))
 	return
-}
-
-//ScoreJob ...
-func ScoreJob(res http.ResponseWriter, req *http.Request) {
-	//=====Params
-	req.ParseForm()
-	params := make(map[string]interface{})
-	for k, v := range req.Form {
-		switch k {
-		case "key":
-			params[k] = strings.Join(v, "")
-		}
-	}
-
-	var rows *sql.Rows
-	var err error
-	// if v, ok := params["size"]; ok {
-	// 	rows, err = db.Query("SELECT * FROM job LIMIT " + v.(string))
-	// } else {
-
-	area := ""
-	key := ""
-	rows, err = db.Query("select `job`,`key`,`good_score`,`bad_score` from `area_key_score` where `area` = ? and `key` =?", area, key)
-	// }
-
-	items := []*model.JobScore{}
-
-	for rows.Next() {
-		r := &model.JobScore{}
-
-		err = rows.Scan(&r.Job, &r.Key, &r.GoodScore, &r.BadScore)
-		chechkErr(err)
-		items = append(items, r)
-	}
-
-	jsonData, err := json.Marshal(items)
-	if err != nil {
-		chechkErr(err)
-	}
-	io.WriteString(res, string(jsonData))
 }
 
 //SyncJobKey ...

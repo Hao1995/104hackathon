@@ -3,6 +3,9 @@ package main
 import (
 	"net/http"
 
+	_ "github.com/Hao1995/104hackathon/config"
+	_ "github.com/Hao1995/104hackathon/glob"
+
 	"github.com/Hao1995/104hackathon/controller"
 )
 
@@ -23,7 +26,6 @@ func main() {
 
 	// - API for frontend
 	http.HandleFunc("/104hackathon/score/area", controller.ScoreArea)
-	// http.HandleFunc("/104hackathon/score/job", controller.ScoreJob)
 
 	// http.HandleFunc("/104hackathon/sync/jobkey", controller.SyncJobKey)
 
