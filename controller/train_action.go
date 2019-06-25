@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strings"
 
-	"github.com/Hao1995/104hackathon/model"
+	"github.com/Hao1995/104hackathon/models"
+	"github.com/astaxie/beego/logs"
 )
 
 //InsertTrainAction User
@@ -17,7 +17,7 @@ func InsertTrainAction(res http.ResponseWriter, req *http.Request) {
 	directoryPath := "C:/Users/user/Downloads/104Hackathon/chunk/train_action" //train_action
 	files, err := ioutil.ReadDir(directoryPath)
 	if err != nil {
-		log.Fatal(err)
+		logs.Critical(err)
 	}
 	for _, file := range files {
 		fileExtension := strings.Split(file.Name(), ".")
@@ -43,8 +43,8 @@ func ParseTrainAction(fileName string) {
 		return
 	}
 
-	// c := []*model.Job{}
-	c := []*model.TrainAction{}
+	// c := []*models.Job{}
+	c := []*models.TrainAction{}
 	err = json.Unmarshal(raw, &c)
 	if err != nil {
 		fmt.Println(err.Error())

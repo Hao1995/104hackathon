@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Hao1995/104hackathon/log"
+	"github.com/astaxie/beego/logs"
 )
 
 //InsertJobCategory ... Store Data
@@ -46,11 +46,11 @@ func InsertJobCategory(res http.ResponseWriter, req *http.Request) {
 
 		stmt, err := db.Prepare(queryString)
 		if err != nil {
-			log.Errorf(err.Error())
+			logs.Error(err.Error())
 		}
 		_, err = stmt.Exec()
 		if err != nil {
-			log.Errorf(err.Error())
+			logs.Error(err.Error())
 		}
 		stmt.Close()
 

@@ -1,4 +1,4 @@
-package model
+package models
 
 //Job 職務
 type Job struct {

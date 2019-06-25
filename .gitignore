@@ -3,3 +3,4 @@ app.conf
 .vscode/launch.json
 data/
 mybinary
+__debug_bin

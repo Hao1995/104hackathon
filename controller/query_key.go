@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Hao1995/104hackathon/log"
+	"github.com/astaxie/beego/logs"
 )
 
 //StoreQueryKey ...
@@ -31,7 +31,7 @@ func StoreQueryKey(res http.ResponseWriter, req *http.Request) {
 
 		err = rows.Scan(&r.Key)
 		if err != nil {
-			log.Errorf(err.Error())
+			logs.Error(err.Error())
 		} else {
 			// if strings.HasPrefix(r.Key, "\"") && strings.HasSuffix(r.Key, "\"") {
 
@@ -42,7 +42,7 @@ func StoreQueryKey(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 	if rows.Err() != nil {
-		log.Errorf(rows.Err().Error())
+		logs.Error(rows.Err().Error())
 	}
 
 	//=====Store Query Key
@@ -70,11 +70,11 @@ func StoreQueryKey(res http.ResponseWriter, req *http.Request) {
 			fmt.Println(queryString)
 			stmt, err := db.Prepare(queryString)
 			if err != nil {
-				log.Errorf(err.Error())
+				logs.Error(err.Error())
 			}
 			_, err = stmt.Exec()
 			if err != nil {
-				log.Errorf(err.Error())
+				logs.Error(err.Error())
 			}
 			stmt.Close()
 

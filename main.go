@@ -13,11 +13,11 @@ func main() {
 
 	http.HandleFunc("/104hackathon/job", controller.HackathonJob)
 	http.HandleFunc("/104hackathon/companies", controller.HackathonCompanies)
-	http.HandleFunc("/104hackathon/train_click", controller.HackathonTrainClick)
+	// http.HandleFunc("/104hackathon/train_click", controller.SyncTrainClick.Get)
 
-	http.HandleFunc("/insert/train_click", controller.InsertTrainClick)
+	http.HandleFunc("/api/sync/train_click", controller.SyncTrainClick)
 	http.HandleFunc("/insert/train_action", controller.InsertTrainAction)
-	http.HandleFunc("/104hackathon/train_click/sync/key", controller.QueryKey)
+	// http.HandleFunc("/104hackathon/train_click/sync/key", controller.QueryKey)
 	http.HandleFunc("/104hackathon/query_key/sync", controller.StoreQueryKey)
 	http.HandleFunc("/104hackathon/job_category/sync", controller.InsertJobCategory)
 	http.HandleFunc("/104hackathon/department/sync", controller.InsertDepartment)

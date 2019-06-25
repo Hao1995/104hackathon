@@ -25,13 +25,19 @@ var (
 )
 
 func init() {
+
+	// - Init DB
 	// db, dberr = sql.Open([driver name], "[user name]:[user password]@tcp([mysql host])/")
-	db, dberr = sql.Open("mysql", config.CfgData.Mysql.User+":"+config.CfgData.Mysql.Password+"@tcp("+config.CfgData.Mysql.Host+":"+config.CfgData.Mysql.Port+")/") //HP
+	db, dberr = sql.Open("mysql", config.CfgData.Mysql.User+":"+config.CfgData.Mysql.Password+"@tcp("+config.CfgData.Mysql.Host+":"+config.CfgData.Mysql.Port+")/"+config.CfgData.Mysql.Name) //HP
 	chechkErr(dberr)
 
+	// max connection. 25%-50% of CPU threads
+	db.SetMaxOpenConns(2)
+
+	// - Init Schemas
 	// sqlFiles, err := ioutil.ReadFile("./sql/init.sql")
 	// if err != nil {
-	// 	log.Fatalf(": %s", err)
+	// 	logs.Fatalf(": %s", err)
 	// }
 
 	// splitSQLFiles := strings.Split(string(sqlFiles), ";")

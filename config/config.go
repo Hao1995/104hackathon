@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 
@@ -14,9 +15,15 @@ type Cfg struct {
 		Password string
 		Host     string
 		Port     string
+		Name     string
 	}
 	Logs struct {
-		Level int
+		Level     int
+		Level_Abc string
+	}
+	Data struct {
+		Train_Click  string
+		Train_Action string
 	}
 }
 
@@ -31,6 +38,8 @@ func init() {
 	if err != nil {
 		log.Fatalf("Failed to read app.conf file: %s", err)
 	}
+
+	fmt.Println(string(appConf))
 
 	err = gcfg.ReadStringInto(&CfgData, string(appConf))
 	if err != nil {

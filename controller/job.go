@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Hao1995/104hackathon/model"
+	"github.com/Hao1995/104hackathon/models"
 )
 
 func Test() {
@@ -38,10 +38,10 @@ func HackathonJob(res http.ResponseWriter, req *http.Request) {
 		rows, err = db.Query("SELECT * FROM job LIMIT 100")
 	}
 
-	jobs := []*model.Job{}
+	jobs := []*models.Job{}
 
 	for rows.Next() {
-		r := &model.Job{}
+		r := &models.Job{}
 
 		err = rows.Scan(&r.Custno, &r.Jobno, &r.Job, &r.Jobcat1, &r.Jobcat2, &r.Jobcat3, &r.Edu, &r.SalaryLow, &r.SalaryHigh, &r.Role, &r.Language1, &r.Language2, &r.Language3, &r.Period, &r.MajorCat, &r.MajorCat2, &r.MajorCat3, &r.Industry, &r.Worktime, &r.RoleStatus, &r.S2, &r.S3, &r.Addrno, &r.S9, &r.NeedEmp, &r.NeedEmp1, &r.Startby, &r.ExpJobcat1, &r.ExpJobcat2, &r.ExpJobcat3, &r.Description, &r.Others)
 		chechkErr(err)

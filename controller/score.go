@@ -10,15 +10,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Hao1995/104hackathon/log"
-	"github.com/Hao1995/104hackathon/model"
+	"github.com/Hao1995/104hackathon/models"
+	"github.com/astaxie/beego/logs"
 )
 
 var (
-	tagScore      []*model.Tag
-	areaScore     map[string]*model.AreaScore
-	jobScore      map[string]*model.JobScore
-	queryKeyScore map[string]*model.QueryKey
+	tagScore      []*models.Tag
+	areaScore     map[string]*models.AreaScore
+	jobScore      map[string]*models.JobScore
+	queryKeyScore map[string]*models.QueryKey
 
 	areaMappingId map[string]string
 
@@ -26,9 +26,9 @@ var (
 )
 
 func init() {
-	areaScore = make(map[string]*model.AreaScore)
-	jobScore = make(map[string]*model.JobScore)
-	queryKeyScore = make(map[string]*model.QueryKey)
+	areaScore = make(map[string]*models.AreaScore)
+	jobScore = make(map[string]*models.JobScore)
+	queryKeyScore = make(map[string]*models.QueryKey)
 
 	areaMappingId = make(map[string]string)
 
@@ -66,9 +66,9 @@ func ScoreArea(res http.ResponseWriter, req *http.Request) {
 
 	start := time.Now()
 
-	finalReturn := &model.FinalReturn{}
-	finalReturnCountry := &model.FinalReturnCountry{}
-	finalReturnJobList := []*model.FinalReturnJobList{}
+	finalReturn := &models.FinalReturn{}
+	finalReturnCountry := &models.FinalReturnCountry{}
+	finalReturnJobList := []*models.FinalReturnJobList{}
 
 	// - Params
 	fmt.Println("=== Parse Parameters")
@@ -121,14 +121,14 @@ func ScoreArea(res http.ResponseWriter, req *http.Request) {
 	countryIDStr := countryID.(string) + "%"
 	sizeInt, err := strconv.Atoi(size.(string))
 	if err != nil {
-		log.Errorf(err.Error())
+		logs.Error(err.Error())
 	}
 	if sizeInt < 0 {
 		io.WriteString(res, "Parameter [size] can not be negative number.")
 	}
 	pageInt, err := strconv.Atoi(page.(string))
 	if err != nil {
-		log.Errorf(err.Error())
+		logs.Error(err.Error())
 	}
 	if pageInt < 0 {
 		io.WriteString(res, "Parameter [page] can not be negative number.")
@@ -138,10 +138,10 @@ func ScoreArea(res http.ResponseWriter, req *http.Request) {
 	rows, err = db.Query("SELECT `job`, `good_score`, `bad_score` FROM `104hackathon-welfare`.`area_job_key_score` WHERE `addr_no` like ? AND `key` = ? GROUP BY `addr_no`,`jobno` LIMIT ? OFFSET ? ", countryIDStr, key, size, offset)
 
 	for rows.Next() {
-		r := &model.FinalReturnJobList{}
+		r := &models.FinalReturnJobList{}
 		err = rows.Scan(&r.JobName, &r.GoodScore, &r.BadScore)
 		if err != nil {
-			log.Errorf(err.Error())
+			logs.Error(err.Error())
 		}
 		r.JobCompany = ""
 		finalReturnJobList = append(finalReturnJobList, r)
@@ -157,7 +157,7 @@ func ScoreArea(res http.ResponseWriter, req *http.Request) {
 	for rows.Next() {
 		err = rows.Scan(&finalReturnCountry.GoodScore, &finalReturnCountry.BadScore)
 		if err != nil {
-			log.Errorf(err.Error())
+			logs.Error(err.Error())
 		}
 	}
 	fmt.Printf("%s took %v\n", "Average Data Of The Area", time.Since(start))
@@ -171,7 +171,7 @@ func ScoreArea(res http.ResponseWriter, req *http.Request) {
 
 	jsonData, err := json.Marshal(finalReturn)
 	if err != nil {
-		log.Errorf(err.Error())
+		logs.Error(err.Error())
 	}
 	fmt.Printf("%s took %v\n", "Marshal Data to JSON", time.Since(start))
 	io.WriteString(res, string(jsonData))
@@ -197,11 +197,11 @@ func SyncJobKey(res http.ResponseWriter, req *http.Request) {
 		queryString := "INSERT INTO job_key(`key`, `job`) VALUES"
 
 		for rows.Next() {
-			r := &model.JobKey{}
+			r := &models.JobKey{}
 
 			err := rows.Scan(&r.Key, &r.Job)
 			if err != nil {
-				log.Errorf(err.Error())
+				logs.Error(err.Error())
 			}
 			value := "(" + stringAddSingleQuotation(processQuote(r.Key)) + "," + stringAddSingleQuotation(processQuote(r.Job)) + "),"
 			queryString = queryString + value
@@ -215,7 +215,7 @@ func SyncJobKey(res http.ResponseWriter, req *http.Request) {
 
 		_, err = stmt.Exec()
 		if err != nil {
-			log.Errorf(err.Error())
+			logs.Error(err.Error())
 		}
 
 		// mu.Unlock()
@@ -234,13 +234,13 @@ func CalKeyScore(res http.ResponseWriter, req *http.Request) {
 	fmt.Println("===== Get All Tag")
 	rows, err := db.Query("SELECT `id`,`name`,`score` FROM tag;")
 
-	tagScore = []*model.Tag{}
+	tagScore = []*models.Tag{}
 	for rows.Next() {
-		r := &model.Tag{}
+		r := &models.Tag{}
 
 		err := rows.Scan(&r.ID, &r.Name, &r.Score)
 		if err != nil {
-			log.Errorf(err.Error())
+			logs.Error(err.Error())
 		}
 
 		tagScore = append(tagScore, r)
@@ -249,13 +249,13 @@ func CalKeyScore(res http.ResponseWriter, req *http.Request) {
 	fmt.Println("===== Get All Key")
 	rows, err = db.Query("SELECT `name` FROM query_key;")
 
-	queryKeys := []*model.QueryKey{}
+	queryKeys := []*models.QueryKey{}
 	for rows.Next() {
-		r := &model.QueryKey{}
+		r := &models.QueryKey{}
 
 		err := rows.Scan(&r.Name)
 		if err != nil {
-			log.Errorf(err.Error())
+			logs.Error(err.Error())
 		}
 
 		wg.Add(1)
@@ -269,11 +269,11 @@ func CalKeyScore(res http.ResponseWriter, req *http.Request) {
 	queryString := "INSERT INTO job_key(`key`, `job`) VALUES"
 
 	for rows.Next() {
-		r := &model.JobKey{}
+		r := &models.JobKey{}
 
 		err := rows.Scan(&r.Key, &r.Job)
 		if err != nil {
-			log.Errorf(err.Error())
+			logs.Error(err.Error())
 		}
 		value := "(" + stringAddSingleQuotation(processQuote(r.Key)) + "," + stringAddSingleQuotation(processQuote(r.Job)) + "),"
 		queryString = queryString + value
@@ -287,12 +287,12 @@ func CalKeyScore(res http.ResponseWriter, req *http.Request) {
 
 	_, err = stmt.Exec()
 	if err != nil {
-		log.Errorf(err.Error())
+		logs.Error(err.Error())
 	}
 }
 
 //CalKeyScoreGetOriginInfoOfKey ...
-func CalKeyScoreGetOriginInfoOfKey(r *model.QueryKey) {
+func CalKeyScoreGetOriginInfoOfKey(r *models.QueryKey) {
 
 	key := r.Name
 
@@ -303,15 +303,15 @@ func CalKeyScoreGetOriginInfoOfKey(r *model.QueryKey) {
 	rows, err := db.Query("SELECT  e.`action` AS 'job_action',`e`.`key`,`e`.`job`,`e`.welfare AS 'company_walfare',`f`.id AS 'districk_id',`f`.name AS 'districk_name' FROM `district` AS f RIGHT JOIN (SELECT d.`key`,`c`.name,`c`.profile,`c`.welfare,`d`.`addr_no`,`d`.`job`,`d`.`action` FROM `companies` AS c RIGHT JOIN(SELECT a.`key`, custno, `b`.addr_no, `b`.`job`, `a`.`action` FROM `job` AS b RIGHT JOIN (SELECT  `train_click`.key, jobno, `action` FROM `train_click` WHERE `train_click`.key = ? AND `train_click`.`action` IN ('clickApply' , 'clickSave')) AS a ON b.jobno = a.jobno) AS d ON c.custno = d.custno) AS e ON e.addr_no = f.id", key)
 
 	if err != nil {
-		log.Errorf(err.Error())
+		logs.Error(err.Error())
 	}
 
 	for rows.Next() {
-		r := &model.ScoreOriginData{}
+		r := &models.ScoreOriginData{}
 
 		err := rows.Scan(&r.JobAction, &r.Key, &r.JobName, &r.CompanyWelfare, &r.DistrictID, &r.DistrictName)
 		if err != nil {
-			log.Errorf(err.Error())
+			logs.Error(err.Error())
 		}
 		goodScore, badScore := CalScore(r.CompanyWelfare)
 
@@ -324,19 +324,19 @@ func CalKeyScoreGetOriginInfoOfKey(r *model.QueryKey) {
 		}
 
 		if _, ok := areaScore[r.DistrictName]; !ok {
-			areaScore[r.DistrictName] = &model.AreaScore{}
+			areaScore[r.DistrictName] = &models.AreaScore{}
 		}
 		areaScore[r.DistrictName].GoodScore = areaScore[r.DistrictName].GoodScore + goodScore
 		areaScore[r.DistrictName].BadScore = areaScore[r.DistrictName].BadScore + badScore
 
 		if _, ok := jobScore[r.JobName]; !ok {
-			jobScore[r.JobName] = &model.JobScore{}
+			jobScore[r.JobName] = &models.JobScore{}
 		}
 		jobScore[r.JobName].GoodScore = jobScore[r.JobName].GoodScore + goodScore
 		jobScore[r.JobName].BadScore = jobScore[r.JobName].BadScore + badScore
 
 		if _, ok := queryKeyScore[r.Key]; !ok {
-			queryKeyScore[r.Key] = &model.QueryKey{}
+			queryKeyScore[r.Key] = &models.QueryKey{}
 		}
 		queryKeyScore[r.Key].GoodScore = queryKeyScore[r.Key].GoodScore + goodScore
 		queryKeyScore[r.Key].BadScore = queryKeyScore[r.Key].BadScore + badScore

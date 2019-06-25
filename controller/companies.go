@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Hao1995/104hackathon/model"
+	"github.com/Hao1995/104hackathon/models"
 )
 
 //HackathonCompanies ...
@@ -32,10 +32,10 @@ func HackathonCompanies(res http.ResponseWriter, req *http.Request) {
 		rows, err = db.Query("SELECT * FROM companies LIMIT 100")
 	}
 
-	companies := []*model.Company{}
+	companies := []*models.Company{}
 
 	for rows.Next() {
-		r := &model.Company{}
+		r := &models.Company{}
 
 		err = rows.Scan(&r.Custno, &r.Invoice, &r.Name, &r.Profile, &r.Management, &r.Welfare, &r.Product)
 		chechkErr(err)

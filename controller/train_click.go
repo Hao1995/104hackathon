@@ -1,59 +1,66 @@
 package controller
 
 import (
+	"bufio"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"reflect"
 	"strconv"
-	"strings"
+	"sync"
+	"time"
 
-	"github.com/Hao1995/104hackathon/model"
-
-	"github.com/Hao1995/104hackathon/log"
+	"github.com/Hao1995/104hackathon/config"
+	"github.com/Hao1995/104hackathon/glob"
+	"github.com/Hao1995/104hackathon/models"
+	"github.com/astaxie/beego/logs"
 )
 
-//HackathonTrainClick ...
-func HackathonTrainClick(res http.ResponseWriter, req *http.Request) {
-	//=====Params
-	req.ParseForm()
-	params := make(map[string]interface{})
-	for k, v := range req.Form {
-		switch k {
-		case "size":
-			params[k] = strings.Join(v, "")
-			// case "message":
-			// 	params[k] = strings.Join(v, "")
-		}
-	}
+// //Get ...
+// func Get(res http.ResponseWriter, req *http.Request) {
 
-	var rows *sql.Rows
-	var err error
-	if v, ok := params["size"]; ok {
-		rows, err = db.Query("SELECT * FROM companies LIMIT " + v.(string))
-	} else {
-		rows, err = db.Query("SELECT * FROM companies LIMIT 100")
-	}
+// 	// - Params
+// 	req.ParseForm()
+// 	params := make(map[string]interface{})
+// 	for k, v := range req.Form {
+// 		switch k {
+// 		case "size":
+// 			params[k] = strings.Join(v, "")
+// 			// case "message":
+// 			// 	params[k] = strings.Join(v, "")
+// 		}
+// 	}
 
-	companies := []*model.Company{}
+// 	var rows *sql.Rows
+// 	var err error
+// 	if v, ok := params["size"]; ok {
+// 		rows, err = db.Query("SELECT * FROM companies LIMIT " + v.(string))
+// 	} else {
+// 		rows, err = db.Query("SELECT * FROM companies LIMIT 100")
+// 	}
 
-	for rows.Next() {
-		r := &model.Company{}
+// 	companies := []*models.Company{}
 
-		err = rows.Scan(&r.Custno, &r.Invoice, &r.Name, &r.Profile, &r.Management, &r.Welfare, &r.Product)
-		chechkErr(err)
-		companies = append(companies, r)
-	}
+// 	for rows.Next() {
+// 		r := &models.Company{}
 
-	jsonData, err := json.Marshal(companies)
-	if err != nil {
-		chechkErr(err)
-	}
-	io.WriteString(res, string(jsonData))
-}
+// 		err = rows.Scan(&r.Custno, &r.Invoice, &r.Name, &r.Profile, &r.Management, &r.Welfare, &r.Product)
+// 		chechkErr(err)
+// 		companies = append(companies, r)
+// 	}
+
+// 	jsonData, err := json.Marshal(companies)
+// 	if err != nil {
+// 		chechkErr(err)
+// 	}
+// 	io.WriteString(res, string(jsonData))
+// }
 
 //QueryKey ...
 func QueryKey(res http.ResponseWriter, req *http.Request) {
@@ -62,18 +69,18 @@ func QueryKey(res http.ResponseWriter, req *http.Request) {
 	fmt.Println("===== Get Total")
 	rows, err := db.Query("SELECT COUNT(1) FROM `train_click`")
 	if err != nil {
-		log.Errorf(err.Error())
+		logs.Error(err.Error())
 	}
 
 	count := 0
 	for rows.Next() {
 		if err := rows.Scan(&count); err != nil {
-			log.Errorf(err.Error())
+			logs.Error(err.Error())
 		}
 		// fmt.Printf("%v \n", count)
 	}
 	if err := rows.Err(); err != nil {
-		log.Errorf(err.Error())
+		logs.Error(err.Error())
 	}
 
 	//=====Get OriginQueryString
@@ -94,7 +101,7 @@ func QueryKey(res http.ResponseWriter, req *http.Request) {
 
 		rows, err = db.Query(query)
 		if err != nil {
-			log.Errorf(err.Error())
+			logs.Error(err.Error())
 		}
 
 		originDatas := []OriginQueryString{}
@@ -103,7 +110,7 @@ func QueryKey(res http.ResponseWriter, req *http.Request) {
 			var id int
 			var queryString string
 			if err := rows.Scan(&id, &queryString); err != nil {
-				log.Errorf(err.Error())
+				logs.Error(err.Error())
 				continue
 			}
 
@@ -115,7 +122,7 @@ func QueryKey(res http.ResponseWriter, req *http.Request) {
 			originDatas = append(originDatas, originData)
 		}
 		if err := rows.Err(); err != nil {
-			log.Errorf(err.Error())
+			logs.Error(err.Error())
 		}
 
 		//===== Decode
@@ -128,7 +135,7 @@ func QueryKey(res http.ResponseWriter, req *http.Request) {
 			str := "localhost/?" + v.QueryString
 			u, err := url.Parse(str)
 			if err != nil {
-				log.Errorf(err.Error())
+				logs.Error(err.Error())
 			}
 			// fmt.Println(u.String())
 
@@ -138,7 +145,7 @@ func QueryKey(res http.ResponseWriter, req *http.Request) {
 				decodeKey[v.ID] = key[0]
 				continue
 			} else {
-				log.Errorf("'keyword' does not exist.")
+				logs.Error("'keyword' does not exist.")
 			}
 		}
 
@@ -148,11 +155,11 @@ func QueryKey(res http.ResponseWriter, req *http.Request) {
 			for k, v := range decodeKey {
 				stmt, err := db.Prepare("UPDATE `train_click` SET `key`=? WHERE `id`= ?;")
 				if err != nil {
-					log.Errorf("[db.Prepare] " + err.Error())
+					logs.Error("[db.Prepare] " + err.Error())
 				}
 				_, err = stmt.Exec(v, k)
 				if err != nil {
-					log.Errorf("[stmt.Exec] " + err.Error())
+					logs.Error("[stmt.Exec] " + err.Error())
 				}
 				stmt.Close()
 			}
@@ -167,27 +174,207 @@ func QueryKey(res http.ResponseWriter, req *http.Request) {
 	io.WriteString(res, "Complete")
 }
 
-//InsertTrainClick User
-func InsertTrainClick(res http.ResponseWriter, req *http.Request) {
-	directoryPath := "F:/gotool/src/test/test1/data/train_click" //train_click
-	files, err := ioutil.ReadDir(directoryPath)
+// SyncTrainClick :
+// Sync the train-click data to DB
+// * Delete all DB data
+// * Insert JSON data to DB
+func SyncTrainClick(w http.ResponseWriter, req *http.Request) {
+
+	w.Header().Set("Content-Type", "application/json")
+
+	res := models.APIRes{}
+
+	// - Begin Transaction
+	tx, err := db.Begin()
 	if err != nil {
-		log.Errorf(err.Error())
+		logs.Error(err)
+		res.Error = err.Error()
+
+		js, err := json.Marshal(res)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Write(js)
+		return
 	}
-	for _, file := range files {
-		fileExtension := strings.Split(file.Name(), ".")
-		if len(fileExtension) == 2 {
-			if fileExtension[1] == "json" {
-				filePath := directoryPath + "/" + file.Name()
-				go func(filePath string) {
-					ParseTrainClick(filePath)
-				}(filePath)
+
+	// - Delete DB data
+	if _, err := tx.Exec("DELETE FROM `train_click`"); err != nil {
+		tx.Rollback()
+		log.Fatal(err)
+		res.Error = err.Error()
+
+		js, err := json.Marshal(res)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Write(js)
+		return
+	}
+
+	// - Open Data File
+	file, err := os.Open(config.CfgData.Data.Train_Click)
+	if err != nil {
+		logs.Error(err)
+		res.Error = err.Error()
+
+		js, err := json.Marshal(res)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Write(js)
+		return
+	}
+	defer file.Close()
+
+	// - Scan Data Line By Line
+	var wg sync.WaitGroup
+	scanner := bufio.NewScanner(file)
+	v := reflect.ValueOf(models.TrainClickJSONItem{})
+	size := glob.MySQLUpperPlaceholders / v.NumField()
+	count := 0
+	errChan := make(chan bool)
+	items := []models.TrainClickJSONItem{}
+	for scanner.Scan() {
+		// - Parse JSON to Item
+		itemJSON := scanner.Text()
+		item := models.TrainClickJSONItem{}
+		json.Unmarshal([]byte(itemJSON), &item)
+		// log.Printf("JSON = %v", item)
+
+		items = append(items, item)
+		if len(items) >= size {
+			// - Send items to channel and clear items, count.
+			wg.Add(1)
+			go syncTrainClickInsertData(&wg, errChan, tx, items)
+			items = []models.TrainClickJSONItem{}
+			count += size
+		}
+	}
+	if len(items) > 0 {
+		// - Send the last data that not reach the size.
+		wg.Add(1)
+		go syncTrainClickInsertData(&wg, errChan, tx, items)
+		count += len(items)
+	}
+
+	// - Check Error of Scanner
+	if err := scanner.Err(); err != nil {
+		res.Error = err.Error()
+		js, err := json.Marshal(res)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Write(js)
+		return
+	}
+
+	wg.Wait()
+
+	err = tx.Commit()
+	if err != nil {
+		res.Error = err.Error()
+		js, err := json.Marshal(res)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Write(js)
+		return
+	}
+
+	// - Rev Err
+	select {
+	case <-errChan:
+		res.Error = fmt.Sprintf("Something wrong !")
+	default:
+		res.Message = fmt.Sprintf("Success insert %v data", count)
+	}
+
+	js, err := json.Marshal(res)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Write(js)
+
+	return
+}
+
+func syncTrainClickInsertData(wg *sync.WaitGroup, errChan chan bool, tx *sql.Tx, data []models.TrainClickJSONItem) {
+	defer wg.Done()
+
+	sqlStr := "INSERT INTO `train_click` (`action`, `jobno`, `date`, `joblist`, `querystring`, `source`) VALUES "
+	vals := []interface{}{}
+	for _, item := range data {
+		action := item.Action
+		jobno, err := strconv.ParseInt(item.Jobno, 10, 64)
+		if err != nil {
+			select {
+			case errChan <- true:
+			default:
+				return
 			}
 		}
-
+		tmpDate, err := strconv.ParseInt(item.Date, 10, 64)
+		if err != nil {
+			select {
+			case errChan <- true:
+			default:
+				return
+			}
+		}
+		tmpDate /= 1000 // without millseconds. ex 1527330445000 -> 1527330445
+		date := time.Unix(tmpDate, 0)
+		// fmt.Print(date)
+		jobList := ""
+		for _, job := range item.Joblist {
+			// Check 'job' is integer.
+			_, err := strconv.ParseInt(job, 10, 64)
+			if err != nil {
+				select {
+				case errChan <- true:
+				default:
+					return
+				}
+			}
+			// Store as string
+			jobList += job + ","
+		}
+		jobList = jobList[0 : len(jobList)-1]
+		queryString := item.QueryString
+		source := item.Source
+		sqlStr += "(?, ?, ?, ?, ?, ?),"
+		vals = append(vals, action, jobno, date, jobList, queryString, source)
+	}
+	sqlStr = sqlStr[0 : len(sqlStr)-1]
+	// fmt.Println(sqlStr)
+	stmt, err := tx.Prepare(sqlStr)
+	if err != nil {
+		fmt.Println(err)
+		select {
+		case errChan <- true:
+		default:
+			return
+		}
+	}
+	// fmt.Println(vals)
+	_, err = stmt.Exec(vals...)
+	if err != nil {
+		tx.Rollback()
+		fmt.Println(err)
+		select {
+		case errChan <- true:
+		default:
+			return
+		}
 	}
 
-	io.WriteString(res, "Complete")
+	return
 }
 
 //ParseTrainClick ...
@@ -198,8 +385,8 @@ func ParseTrainClick(fileName string) {
 		return
 	}
 
-	// c := []*model.Job{}
-	c := []*model.TrainClick{}
+	// c := []*models.Job{}
+	c := []*models.TrainClick{}
 	err = json.Unmarshal(raw, &c)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -209,12 +396,12 @@ func ParseTrainClick(fileName string) {
 
 	for _, v := range c {
 		// InsertToJob(fileName, v) //job
-		TrainClcikInsert(fileName, v) //companies
+		trainClcikInsert(fileName, v) //companies
 	}
 }
 
 //TrainClcikInsert ...
-func TrainClcikInsert(fileName string, v *model.TrainClick) {
+func trainClcikInsert(fileName string, v *models.TrainClick) {
 	mu.Lock()
 	for {
 		if dbConnentCount < dbConnentCountMax {
