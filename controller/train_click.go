@@ -243,7 +243,7 @@ func SyncTrainClick(w http.ResponseWriter, req *http.Request) {
 		itemJSON := scanner.Text()
 		item := models.TrainClickJSONItem{}
 		json.Unmarshal([]byte(itemJSON), &item)
-		// log.Printf("JSON = %v", item)
+		// logs.Debug("JSON = %v", item)
 
 		items = append(items, item)
 		if len(items) >= size {

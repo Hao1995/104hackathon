@@ -16,7 +16,8 @@ func main() {
 	// http.HandleFunc("/104hackathon/train_click", controller.SyncTrainClick.Get)
 
 	http.HandleFunc("/api/sync/train_click", controller.SyncTrainClick)
-	http.HandleFunc("/insert/train_action", controller.InsertTrainAction)
+	http.HandleFunc("/api/sync/train_action", controller.SyncTrainAction)
+
 	// http.HandleFunc("/104hackathon/train_click/sync/key", controller.QueryKey)
 	http.HandleFunc("/104hackathon/query_key/sync", controller.StoreQueryKey)
 	http.HandleFunc("/104hackathon/job_category/sync", controller.InsertJobCategory)
