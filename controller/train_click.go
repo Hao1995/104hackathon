@@ -2,12 +2,10 @@ package controller
 
 import (
 	"bufio"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -184,12 +182,12 @@ func SyncTrainClick(w http.ResponseWriter, req *http.Request) {
 
 	res := models.APIRes{}
 
-	// - Begin Transaction
-	tx, err := db.Begin()
+	// - Get the size of train_click data
+	var trainClickIdx int
+	rows, err := db.Query("SELECT COUNT(1) FROM `train_click`")
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()
-
 		js, err := json.Marshal(res)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -198,13 +196,25 @@ func SyncTrainClick(w http.ResponseWriter, req *http.Request) {
 		w.Write(js)
 		return
 	}
-
-	// - Delete DB data
-	if _, err := tx.Exec("DELETE FROM `train_click`"); err != nil {
-		tx.Rollback()
-		log.Fatal(err)
+	defer rows.Close()
+	for rows.Next() {
+		err := rows.Scan(&trainClickIdx)
+		if err != nil {
+			logs.Error(err)
+			res.Error = err.Error()
+			js, err := json.Marshal(res)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Write(js)
+			return
+		}
+	}
+	err = rows.Err()
+	if err != nil {
+		logs.Error(err)
 		res.Error = err.Error()
-
 		js, err := json.Marshal(res)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -213,6 +223,7 @@ func SyncTrainClick(w http.ResponseWriter, req *http.Request) {
 		w.Write(js)
 		return
 	}
+	logs.Trace("Will skip %v rows.", trainClickIdx)
 
 	// - Open Data File
 	file, err := os.Open(config.CfgData.Data.Train_Click)
@@ -235,10 +246,18 @@ func SyncTrainClick(w http.ResponseWriter, req *http.Request) {
 	scanner := bufio.NewScanner(file)
 	v := reflect.ValueOf(models.TrainClickJSONItem{})
 	size := glob.MySQLUpperPlaceholders / v.NumField()
-	count := 0
+	skipCount := 0
+	totalCount := 0
+	guard := make(chan struct{}, 2)
 	errChan := make(chan bool)
 	items := []models.TrainClickJSONItem{}
 	for scanner.Scan() {
+		// - Skip existing data.
+		if skipCount < trainClickIdx {
+			skipCount++
+			continue
+		}
+
 		// - Parse JSON to Item
 		itemJSON := scanner.Text()
 		item := models.TrainClickJSONItem{}
@@ -249,16 +268,18 @@ func SyncTrainClick(w http.ResponseWriter, req *http.Request) {
 		if len(items) >= size {
 			// - Send items to channel and clear items, count.
 			wg.Add(1)
-			go syncTrainClickInsertData(&wg, errChan, tx, items)
+			guard <- struct{}{}
+			go syncTrainClickInsertData(&wg, guard, errChan, items)
+			logs.Trace("Send to insert %v data.", size)
 			items = []models.TrainClickJSONItem{}
-			count += size
 		}
 	}
 	if len(items) > 0 {
 		// - Send the last data that not reach the size.
+		guard <- struct{}{}
 		wg.Add(1)
-		go syncTrainClickInsertData(&wg, errChan, tx, items)
-		count += len(items)
+		go syncTrainClickInsertData(&wg, guard, errChan, items)
+		logs.Trace("Last time send to insert %v data.", len(items))
 	}
 
 	// - Check Error of Scanner
@@ -273,26 +294,15 @@ func SyncTrainClick(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	logs.Trace("Waiting all goroutine")
 	wg.Wait()
-
-	err = tx.Commit()
-	if err != nil {
-		res.Error = err.Error()
-		js, err := json.Marshal(res)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Write(js)
-		return
-	}
 
 	// - Rev Err
 	select {
 	case <-errChan:
 		res.Error = fmt.Sprintf("Something wrong !")
 	default:
-		res.Message = fmt.Sprintf("Success insert %v data", count)
+		res.Message = fmt.Sprintf("Skip %v data and insert %v data", skipCount, totalCount)
 	}
 
 	js, err := json.Marshal(res)
@@ -305,7 +315,7 @@ func SyncTrainClick(w http.ResponseWriter, req *http.Request) {
 	return
 }
 
-func syncTrainClickInsertData(wg *sync.WaitGroup, errChan chan bool, tx *sql.Tx, data []models.TrainClickJSONItem) {
+func syncTrainClickInsertData(wg *sync.WaitGroup, guard chan struct{}, errChan chan bool, data []models.TrainClickJSONItem) {
 	defer wg.Done()
 
 	sqlStr := "INSERT INTO `train_click` (`action`, `jobno`, `date`, `joblist`, `querystring`, `source`) VALUES "
@@ -317,6 +327,7 @@ func syncTrainClickInsertData(wg *sync.WaitGroup, errChan chan bool, tx *sql.Tx,
 			select {
 			case errChan <- true:
 			default:
+				<-guard
 				return
 			}
 		}
@@ -325,6 +336,7 @@ func syncTrainClickInsertData(wg *sync.WaitGroup, errChan chan bool, tx *sql.Tx,
 			select {
 			case errChan <- true:
 			default:
+				<-guard
 				return
 			}
 		}
@@ -352,28 +364,31 @@ func syncTrainClickInsertData(wg *sync.WaitGroup, errChan chan bool, tx *sql.Tx,
 		vals = append(vals, action, jobno, date, jobList, queryString, source)
 	}
 	sqlStr = sqlStr[0 : len(sqlStr)-1]
-	// fmt.Println(sqlStr)
-	stmt, err := tx.Prepare(sqlStr)
+	// logs.Trace(sqlStr)
+	stmt, err := db.Prepare(sqlStr)
 	if err != nil {
-		fmt.Println(err)
+		logs.Error(err)
 		select {
 		case errChan <- true:
 		default:
+			<-guard
 			return
 		}
 	}
-	// fmt.Println(vals)
+	defer stmt.Close()
+	// logs.Trace(vals)
 	_, err = stmt.Exec(vals...)
 	if err != nil {
-		tx.Rollback()
-		fmt.Println(err)
+		logs.Error(err)
 		select {
 		case errChan <- true:
 		default:
+			<-guard
 			return
 		}
 	}
 
+	<-guard
 	return
 }
 

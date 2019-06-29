@@ -2,10 +2,8 @@ package controller
 
 import (
 	"bufio"
-	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"reflect"
@@ -29,12 +27,12 @@ func SyncTrainAction(w http.ResponseWriter, req *http.Request) {
 
 	res := models.APIRes{}
 
-	// - Begin Transaction
-	tx, err := db.Begin()
+	// - Get the size of train_action data
+	var trainActionIdx int
+	rows, err := db.Query("SELECT COUNT(1) FROM `train_action`")
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()
-
 		js, err := json.Marshal(res)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -43,13 +41,25 @@ func SyncTrainAction(w http.ResponseWriter, req *http.Request) {
 		w.Write(js)
 		return
 	}
-
-	// - Delete DB data
-	if _, err := tx.Exec("DELETE FROM `train_action`"); err != nil {
-		tx.Rollback()
-		log.Fatal(err)
+	defer rows.Close()
+	for rows.Next() {
+		err := rows.Scan(&trainActionIdx)
+		if err != nil {
+			logs.Error(err)
+			res.Error = err.Error()
+			js, err := json.Marshal(res)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Write(js)
+			return
+		}
+	}
+	err = rows.Err()
+	if err != nil {
+		logs.Error(err)
 		res.Error = err.Error()
-
 		js, err := json.Marshal(res)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -58,13 +68,13 @@ func SyncTrainAction(w http.ResponseWriter, req *http.Request) {
 		w.Write(js)
 		return
 	}
+	logs.Trace("Will skip %v rows.", trainActionIdx)
 
 	// - Open Data File
 	file, err := os.Open(config.CfgData.Data.Train_Action)
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()
-
 		js, err := json.Marshal(res)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -80,30 +90,41 @@ func SyncTrainAction(w http.ResponseWriter, req *http.Request) {
 	scanner := bufio.NewScanner(file)
 	v := reflect.ValueOf(models.TrainActionJSONItem{})
 	size := glob.MySQLUpperPlaceholders / v.NumField()
-	count := 0
+	skipCount := 0
+	totalCount := 0
+	guard := make(chan struct{}, 2) // Max goroutines limit.
 	errChan := make(chan bool)
 	items := []models.TrainActionJSONItem{}
 	for scanner.Scan() {
+		// - Skip existing data.
+		if skipCount < trainActionIdx {
+			skipCount++
+			continue
+		}
+
 		// - Parse JSON to Item
 		itemJSON := scanner.Text()
 		item := models.TrainActionJSONItem{}
 		json.Unmarshal([]byte(itemJSON), &item)
-		// logs.Debug("JSON = %v", item)
+		// logs.Trace("JSON = %v", item)
 
 		items = append(items, item)
+		totalCount++
 		if len(items) >= size {
-			// - Send items to channel and clear items, count.
+			// - Send items to channel and clear items, skipCount.
+			guard <- struct{}{}
 			wg.Add(1)
-			go syncTrainActionInsertData(&wg, errChan, tx, items)
+			go syncTrainActionInsertData(&wg, guard, errChan, items)
+			logs.Trace("Send to insert %v data.", size)
 			items = []models.TrainActionJSONItem{}
-			count += size
 		}
 	}
 	if len(items) > 0 {
 		// - Send the last data that not reach the size.
+		guard <- struct{}{}
 		wg.Add(1)
-		go syncTrainActionInsertData(&wg, errChan, tx, items)
-		count += len(items)
+		go syncTrainActionInsertData(&wg, guard, errChan, items)
+		logs.Trace("Last time send to insert %v data.", len(items))
 	}
 
 	// - Check Error of Scanner
@@ -118,26 +139,15 @@ func SyncTrainAction(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	logs.Trace("Waiting all goroutine")
 	wg.Wait()
-
-	err = tx.Commit()
-	if err != nil {
-		res.Error = err.Error()
-		js, err := json.Marshal(res)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Write(js)
-		return
-	}
 
 	// - Rev Err
 	select {
 	case <-errChan:
 		res.Error = fmt.Sprintf("Something wrong !")
 	default:
-		res.Message = fmt.Sprintf("Success insert %v data", count)
+		res.Message = fmt.Sprintf("Skip %v data and insert %v data", skipCount, totalCount)
 	}
 
 	js, err := json.Marshal(res)
@@ -150,7 +160,7 @@ func SyncTrainAction(w http.ResponseWriter, req *http.Request) {
 	return
 }
 
-func syncTrainActionInsertData(wg *sync.WaitGroup, errChan chan bool, tx *sql.Tx, data []models.TrainActionJSONItem) {
+func syncTrainActionInsertData(wg *sync.WaitGroup, guard chan struct{}, errChan chan bool, data []models.TrainActionJSONItem) {
 	defer wg.Done()
 
 	sqlStr := "INSERT INTO `train_action` (`jobno`, `date`, `action`, `source`, `device`) VALUES "
@@ -159,17 +169,21 @@ func syncTrainActionInsertData(wg *sync.WaitGroup, errChan chan bool, tx *sql.Tx
 		action := item.Action
 		jobno, err := strconv.ParseInt(item.Jobno, 10, 64)
 		if err != nil {
+			logs.Error(err)
 			select {
 			case errChan <- true:
 			default:
+				<-guard
 				return
 			}
 		}
 		tmpDate, err := strconv.ParseInt(item.Date, 10, 64)
 		if err != nil {
+			logs.Error(err)
 			select {
 			case errChan <- true:
 			default:
+				<-guard
 				return
 			}
 		}
@@ -181,27 +195,30 @@ func syncTrainActionInsertData(wg *sync.WaitGroup, errChan chan bool, tx *sql.Tx
 		vals = append(vals, jobno, date, action, source, device)
 	}
 	sqlStr = sqlStr[0 : len(sqlStr)-1]
-	logs.Debug(sqlStr)
-	stmt, err := tx.Prepare(sqlStr)
+	// logs.Trace(sqlStr)
+	stmt, err := db.Prepare(sqlStr)
 	if err != nil {
 		logs.Error(err)
 		select {
 		case errChan <- true:
 		default:
+			<-guard
 			return
 		}
 	}
-	logs.Debug(vals)
+	defer stmt.Close()
+	// logs.Trace(vals)
 	_, err = stmt.Exec(vals...)
 	if err != nil {
-		tx.Rollback()
 		logs.Error(err)
 		select {
 		case errChan <- true:
 		default:
+			<-guard
 			return
 		}
 	}
 
+	<-guard
 	return
 }
