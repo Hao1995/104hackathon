@@ -22,6 +22,8 @@ type Cfg struct {
 		Level_Abc string
 	}
 	Data struct {
+		Companies    string
+		Jobs         string
 		Train_Click  string
 		Train_Action string
 	}

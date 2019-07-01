@@ -5,5 +5,6 @@ CREATE TABLE `104hackathon-welfare`.`companies` (
   `profile` TEXT NULL COMMENT '公司簡介',
   `management` TEXT NULL COMMENT '經營理念',
   `welfare` TEXT NULL COMMENT '公司福利',
-  `product` TEXT NULL COMMENT '公司業務介紹')
+  `product` TEXT NULL COMMENT '公司業務介紹',
+  PRIMARY KEY (`custno`))
 ENGINE = InnoDB;
