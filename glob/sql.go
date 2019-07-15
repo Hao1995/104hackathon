@@ -1,5 +1,5 @@
 package glob
 
 const (
-	MySQLUpperPlaceholders = 65536
+	MySQLUpperPlaceholders = 65535
 )
