@@ -1,9 +1,10 @@
 package config
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
+
+	"github.com/astaxie/beego/logs"
 
 	gcfg "gopkg.in/gcfg.v1"
 )
@@ -22,10 +23,14 @@ type Cfg struct {
 		Level_Abc string
 	}
 	Data struct {
-		Companies    string
-		Jobs         string
-		Train_Click  string
-		Train_Action string
+		Companies      string
+		Jobs           string
+		Train_Click    string
+		Train_Action   string
+		Departments    string
+		Districts      string
+		Industries     string
+		Job_Categories string
 	}
 }
 
@@ -41,7 +46,7 @@ func init() {
 		log.Fatalf("Failed to read app.conf file: %s", err)
 	}
 
-	fmt.Println(string(appConf))
+	logs.Debug(string(appConf))
 
 	err = gcfg.ReadStringInto(&CfgData, string(appConf))
 	if err != nil {
