@@ -19,10 +19,6 @@ import (
 	"github.com/astaxie/beego/logs"
 )
 
-func Test() {
-	fmt.Println("controller")
-}
-
 //HackathonJob ...
 func HackathonJob(res http.ResponseWriter, req *http.Request) {
 

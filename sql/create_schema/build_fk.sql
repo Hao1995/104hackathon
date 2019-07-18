@@ -1,3 +1,5 @@
+-- Build FK after all data has been synchronized.
+
 ALTER TABLE `jobs`
 ADD FOREIGN KEY (`custno`) REFERENCES `companies`(`custno`) 
 	ON UPDATE CASCADE;
