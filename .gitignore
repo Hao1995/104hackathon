@@ -4,3 +4,4 @@ app.conf
 data/
 mybinary
 __debug_bin
+controller/test.go

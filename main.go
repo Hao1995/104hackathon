@@ -29,7 +29,7 @@ func main() {
 
 	// http.HandleFunc("/104hackathon/sync/jobkey", controller.SyncJobKey)
 
-	// http.HandleFunc("/test", controller.Test)
+	http.HandleFunc("/test", controller.Test)
 	http.ListenAndServe(":8080", nil)
 
 }

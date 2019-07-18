@@ -21,7 +21,9 @@ func Users(w http.ResponseWriter, req *http.Request) {
 	case http.MethodGet:
 		ins.get(httpLib)
 	case http.MethodPost:
+		ins.post(httpLib)
 	case http.MethodDelete:
+		ins.delete(httpLib)
 	default:
 		res.Error = fmt.Sprintf("There is no way correspond to method '%v'", req.Method)
 		httpLib.WriteJSON(res)
@@ -56,4 +58,84 @@ func (c *UsersController) get(httpLib *utils.HTTPLib) {
 	}
 
 	httpLib.WriteJSON(items)
+}
+
+func (c *UsersController) post(httpLib *utils.HTTPLib) {
+
+	res := models.APIRes{}
+
+	httpLib.Req.ParseForm()
+	user := models.UsersItem{}
+	nameVal := httpLib.Req.FormValue("name")
+	emailVal := httpLib.Req.FormValue("email")
+
+	if nameVal == "" {
+		res.Error = "'name' is necessary."
+		httpLib.WriteJSON(res)
+		return
+	}
+	user.Name = &nameVal
+	if emailVal != "" {
+		user.Email = &emailVal
+	}
+
+	// - Insert Data
+	name := utils.NewNullString(user.Name)
+	email := utils.NewNullString(user.Email)
+
+	stmt, err := db.Prepare("INSERT INTO `users` (`name`, `email`) VALUES (?, ?)")
+	if err != nil {
+		logs.Error(err)
+		res.Error = err.Error()
+		httpLib.WriteJSON(res)
+		return
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(name, email)
+	if err != nil {
+		logs.Error(err)
+		res.Error = err.Error()
+		httpLib.WriteJSON(res)
+		return
+	}
+
+	res.Message = fmt.Sprintf("Sucess insert {name:%v, email:%v}", *user.Name, *user.Email)
+	httpLib.WriteJSON(res)
+}
+
+func (c *UsersController) delete(httpLib *utils.HTTPLib) {
+
+	res := models.APIRes{}
+
+	id := httpLib.Req.URL.Query().Get("id")
+
+	// - Delete Data
+	stmt, err := db.Prepare("DELETE FROM `users` WHERE `id` = ?")
+	if err != nil {
+		logs.Error(err)
+		res.Error = err.Error()
+		httpLib.WriteJSON(res)
+		return
+	}
+	defer stmt.Close()
+
+	execRes, err := stmt.Exec(id)
+	if err != nil {
+		logs.Error(err)
+		res.Error = err.Error()
+		httpLib.WriteJSON(res)
+		return
+	}
+
+	num, err := execRes.RowsAffected()
+	if err != nil {
+		logs.Error(err)
+		res.Error = err.Error()
+		httpLib.WriteJSON(res)
+		return
+	}
+
+	res.Message = fmt.Sprintf("Delete %v data", num)
+	httpLib.WriteJSON(res)
 }
