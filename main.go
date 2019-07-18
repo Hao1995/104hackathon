@@ -21,6 +21,7 @@ func main() {
 	http.HandleFunc("/api/sync/train_action", controller.SyncTrainAction)
 
 	http.HandleFunc("/api/user", controller.Users)
+	http.HandleFunc("/api/welfare", controller.Welfares)
 
 	http.HandleFunc("/104hackathon/query_key/sync", controller.StoreQueryKey)
 

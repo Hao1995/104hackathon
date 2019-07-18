@@ -9,9 +9,9 @@ import (
 	"github.com/astaxie/beego/logs"
 )
 
-func Users(w http.ResponseWriter, req *http.Request) {
+func Welfares(w http.ResponseWriter, req *http.Request) {
 
-	ins := &UsersController{}
+	ins := &WelfaresController{}
 	httpLib := &utils.HTTPLib{}
 	httpLib.Init(w, req)
 
@@ -31,12 +31,12 @@ func Users(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-type UsersController struct {
+type WelfaresController struct {
 }
 
-func (c *UsersController) get(httpLib *utils.HTTPLib) {
+func (c *WelfaresController) get(httpLib *utils.HTTPLib) {
 
-	rows, err := db.Query("SELECT * FROM `users` ORDER BY `name")
+	rows, err := db.Query("SELECT * FROM `welfares` ORDER BY `name`")
 	if err != nil {
 		logs.Error(err)
 		httpLib.WriteJSON(err)
@@ -44,46 +44,41 @@ func (c *UsersController) get(httpLib *utils.HTTPLib) {
 	}
 	defer rows.Close()
 
-	items := []*models.UsersItem{}
+	items := []*models.WelfaresItem{}
 	for rows.Next() {
-		item := &models.UsersItem{}
-		err := rows.Scan(&item.ID, &item.Name, &item.Email)
+		item := &models.WelfaresItem{}
+		err := rows.Scan(&item.ID, &item.Name)
 		if err != nil {
 			logs.Error(err)
 			httpLib.WriteJSON(err)
 			return
 		}
 		items = append(items, item)
-		// logs.Debug("id:%v, name:%v, email:%v", *item.ID, *item.Name, *item.Email)
+		// logs.Debug("id:%v, name:%v", *item.ID, *item.Name)
 	}
 
 	httpLib.WriteJSON(items)
 }
 
-func (c *UsersController) post(httpLib *utils.HTTPLib) {
+func (c *WelfaresController) post(httpLib *utils.HTTPLib) {
 
 	res := models.APIRes{}
 
 	httpLib.Req.ParseForm()
-	user := models.UsersItem{}
+	welfare := models.WelfaresItem{}
 	nameVal := httpLib.Req.FormValue("name")
-	emailVal := httpLib.Req.FormValue("email")
 
 	if nameVal == "" {
 		res.Error = "'name' is necessary."
 		httpLib.WriteJSON(res)
 		return
 	}
-	user.Name = &nameVal
-	if emailVal != "" {
-		user.Email = &emailVal
-	}
+	welfare.Name = &nameVal
 
 	// - Insert Data
-	name := utils.NewNullString(user.Name)
-	email := utils.NewNullString(user.Email)
+	name := utils.NewNullString(welfare.Name)
 
-	stmt, err := db.Prepare("INSERT INTO `users` (`name`, `email`) VALUES (?, ?)")
+	stmt, err := db.Prepare("INSERT INTO `welfares` (`name`) VALUES (?)")
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()
@@ -92,7 +87,7 @@ func (c *UsersController) post(httpLib *utils.HTTPLib) {
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(name, email)
+	_, err = stmt.Exec(name)
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()
@@ -100,18 +95,18 @@ func (c *UsersController) post(httpLib *utils.HTTPLib) {
 		return
 	}
 
-	res.Message = fmt.Sprintf("Sucess insert {name:%v, email:%v}", *user.Name, *user.Email)
+	res.Message = fmt.Sprintf("Sucess insert {name:%v}", *welfare.Name)
 	httpLib.WriteJSON(res)
 }
 
-func (c *UsersController) delete(httpLib *utils.HTTPLib) {
+func (c *WelfaresController) delete(httpLib *utils.HTTPLib) {
 
 	res := models.APIRes{}
 
 	id := httpLib.Req.URL.Query().Get("id")
 
 	// - Delete Data
-	stmt, err := db.Prepare("DELETE FROM `users` WHERE `id` = ?")
+	stmt, err := db.Prepare("DELETE FROM `welfares` WHERE `id` = ?")
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()

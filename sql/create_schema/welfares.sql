@@ -1,6 +1,6 @@
-CREATE TABLE `104hackathon-welfare`.`welfares` (
-  `id` INT(11) UNSIGNED NOT NULL,
-  `name` VARCHAR(30) NOT NULL,
-  PRIMARY KEY (`id`)
-)
-ENGINE = InnoDB;
+CREATE TABLE `welfares` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(30) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
