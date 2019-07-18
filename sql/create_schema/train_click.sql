@@ -1,7 +1,7 @@
 CREATE TABLE `train_click` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `action` varchar(10) DEFAULT NULL COMMENT 'Max size is 10(clickApply).',
-  `jobno` int(11) DEFAULT NULL,
+  `jobno` int(11) UNSIGNED DEFAULT NULL,
   `date` timestamp NULL DEFAULT NULL,
   `joblist` text,
   `querystring` text,

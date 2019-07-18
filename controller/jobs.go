@@ -211,13 +211,36 @@ func syncJobsInsertData(wg *sync.WaitGroup, guard chan struct{}, errChan chan bo
 
 	sqlStr := "INSERT INTO `jobs` (`custno`, `jobno`, `job`, `jobcat1`, `jobcat2`, `jobcat3`, `edu`, `salary_low`, `salary_high`, `role`, `language1`, `language2`, `language3`, `work_dur`, `major_cat1`, `major_cat2`, `major_cat3`, `industry`, `vacation`, `role_status`, `management`, `buiness_trip`, `addr_no`, `work_time`, `need_emp_low`, `need_emp_high`, `startby`, `exp_jobcat1`, `exp_jobcat2`, `exp_jobcat3`, `desc`, `others`) VALUES "
 	vals := []interface{}{}
+	var errInData error
 	for _, item := range data {
 		custno := utils.NewNullString(item.Custno)
-		jobno := utils.NewNullInt64(item.Jobno)
+
+		jobno, err := utils.StrToNewNullInt64(item.Jobno)
+		if err != nil {
+			errInData = err
+			break
+		}
+
 		job := utils.NewNullString(item.Job)
-		jobcat1 := utils.NewNullInt64(item.Jobcat1)
-		jobcat2 := utils.NewNullInt64(item.Jobcat2)
-		jobcat3 := utils.NewNullInt64(item.Jobcat3)
+
+		jobcat1, err := utils.StrToNewNullInt64(item.Jobcat1)
+		if err != nil {
+			errInData = err
+			break
+		}
+
+		jobcat2, err := utils.StrToNewNullInt64(item.Jobcat2)
+		if err != nil {
+			errInData = err
+			break
+		}
+
+		jobcat3, err := utils.StrToNewNullInt64(item.Jobcat3)
+		if err != nil {
+			errInData = err
+			break
+		}
+
 		edu := utils.NewNullInt64(item.Edu)
 		salaryLow := utils.NewNullInt64(item.SalaryLow)
 		salaryHigh := utils.NewNullInt64(item.SalaryLow)
@@ -226,27 +249,78 @@ func syncJobsInsertData(wg *sync.WaitGroup, guard chan struct{}, errChan chan bo
 		language2 := utils.NewNullInt64(item.Language2)
 		language3 := utils.NewNullInt64(item.Language3)
 		workDur := utils.NewNullInt64(item.WorkDur)
-		majorCat1 := utils.NewNullInt64(item.MajorCat1)
-		majorCat2 := utils.NewNullInt64(item.MajorCat2)
-		majorCat3 := utils.NewNullInt64(item.MajorCat3)
-		industry := utils.NewNullInt64(item.Industry)
+
+		majorCat1, err := utils.StrToNewNullInt64(item.MajorCat1)
+		if err != nil {
+			errInData = err
+			break
+		}
+
+		majorCat2, err := utils.StrToNewNullInt64(item.MajorCat2)
+		if err != nil {
+			errInData = err
+			break
+		}
+
+		majorCat3, err := utils.StrToNewNullInt64(item.MajorCat3)
+		if err != nil {
+			errInData = err
+			break
+		}
+
+		industry, err := utils.StrToNewNullInt64(item.Industry)
+		if err != nil {
+			errInData = err
+			break
+		}
+
 		vacation := utils.NewNullString(item.Vacation)
 		roleStatus := utils.NewNullInt64(item.RoleStatus)
 		management := utils.NewNullInt64(item.Management)
 		buinessTrip := utils.NewNullInt64(item.BuinessTrip)
+
+		if *item.Addrno == 0 {
+			item.Addrno = nil
+		}
 		addrNo := utils.NewNullInt64(item.Addrno)
+
 		workTime := utils.NewNullInt64(item.WorkTime)
 		needEmpLow := utils.NewNullInt64(item.NeedEmpLow)
 		needEmpHigh := utils.NewNullInt64(item.NeedEmpHigh)
 		startby := utils.NewNullInt64(item.StartBy)
-		expJobcat1 := utils.NewNullInt64(item.ExpJobCat1)
-		expJobcat2 := utils.NewNullInt64(item.ExpJobCat2)
-		expJobcat3 := utils.NewNullInt64(item.ExpJobCat3)
+
+		expJobcat1, err := utils.StrToNewNullInt64(item.ExpJobCat1)
+		if err != nil {
+			errInData = err
+			break
+		}
+
+		expJobcat2, err := utils.StrToNewNullInt64(item.ExpJobCat2)
+		if err != nil {
+			errInData = err
+			break
+		}
+
+		expJobcat3, err := utils.StrToNewNullInt64(item.ExpJobCat3)
+		if err != nil {
+			errInData = err
+			break
+		}
+
 		desc := utils.NewNullString(item.Desc)
 		others := utils.NewNullString(item.Others)
 
 		sqlStr += "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?),"
 		vals = append(vals, custno, jobno, job, jobcat1, jobcat2, jobcat3, edu, salaryLow, salaryHigh, role, language1, language2, language3, workDur, majorCat1, majorCat2, majorCat3, industry, vacation, roleStatus, management, buinessTrip, addrNo, workTime, needEmpLow, needEmpHigh, startby, expJobcat1, expJobcat2, expJobcat3, desc, others)
+	}
+	if errInData != nil {
+		logs.Error(errInData)
+		select {
+		case errChan <- true:
+		default:
+			<-guard
+			return
+		}
 	}
 	sqlStr = sqlStr[0 : len(sqlStr)-1]
 	// logs.Debug(sqlStr)
