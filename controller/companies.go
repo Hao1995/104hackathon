@@ -229,6 +229,7 @@ func HackathonCompanies(res http.ResponseWriter, req *http.Request) {
 	} else {
 		rows, err = db.Query("SELECT * FROM companies LIMIT 100")
 	}
+	rows.Close()
 
 	companies := []*models.Company{}
 

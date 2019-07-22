@@ -14,6 +14,7 @@ func init() {
 		logs.SetLevel(config.CfgData.Logs.Level)
 	}
 
+	logs.EnableFuncCallDepth(true)
 	logs.SetLogFuncCallDepth(3) //print the position that we wrote the logs
 
 	// Logs example

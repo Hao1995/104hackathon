@@ -5,19 +5,19 @@ type JobsJSONItem struct {
 	Custno      *string `json:"custno"`
 	Jobno       *string `json:"jobno"`
 	Job         *string `json:"job"`
-	Jobcat1     *string `json:"jobcat1"`
-	Jobcat2     *string `json:"jobcat2"`
+	Jobcat1     *string `json:"jobcat1"` //相關職務
+	Jobcat2     *string `json:"jobcat2"` // No ref. Because missing some category.
 	Jobcat3     *string `json:"jobcat3"`
 	Edu         *int64  `json:"edu"` // 最高學歷(用二進位儲存)(1: 高中以下 2:高中4:專科 8:大學16碩士 32:博士)
 	SalaryLow   *int64  `json:"salary_low"`
 	SalaryHigh  *int64  `json:"salary_high"`
-	Role        *int64  // 1:全職2:兼職 3:高階4:殘障+全 5:殘障+兼 6:殘障+高
+	Role        *int64  `json:"role"` // 1:全職2:兼職 3:高階4:殘障+全 5:殘障+兼 6:殘障+高
 	Language1   *int64  `json:"language1"`
 	Language2   *int64  `json:"language2"`
 	Language3   *int64  `json:"language3"`
-	WorkDur     *int64  `json:"period"`    // Working experience(working duration)
-	MajorCat1   *string `json:"major_cat"` // 相關科系類別
-	MajorCat2   *string `json:"major_cat2"`
+	WorkDur     *int64  `json:"period"`     // Working experience(working duration)
+	MajorCat1   *string `json:"major_cat"`  // 相關科系類別
+	MajorCat2   *string `json:"major_cat2"` // No ref. Because missing some category.
 	MajorCat3   *string `json:"major_cat3"`
 	Industry    *string `json:"industry"`
 	Vacation    *string `json:"worktime"`
@@ -25,13 +25,48 @@ type JobsJSONItem struct {
 	Management  *int64  `json:"s2"`          // 管理責任：-1:該職務尚未填寫 0:無 1:4人以下 2:5-8人 3:9-12人 4:13人以上 5:未定
 	BuinessTrip *int64  `json:"s3"`          // 是否出差：-1:該職務尚未填寫 0:無 1:1個月內 2:3個月以下 3:6個月以下 4:7個月以上 5:未定 (註.3)
 	Addrno      *int64  `json:"addr_no"`
-	WorkTime    *int64  `json:"s9"`        // 上班時段：0:預設 1:日班 2:晚班 4:大夜班 8:假日班
-	NeedEmpLow  *int64  `json:"need_emp"`  // 最低需求人數
-	NeedEmpHigh *int64  `json:"need_emp1"` // 最高需求人數
-	StartBy     *int64  // 上班日期：0:一週內 1:兩週 2:一個月 3:不限 4:可年後上班
+	WorkTime    *int64  `json:"s9"`          // 上班時段：0:預設 1:日班 2:晚班 4:大夜班 8:假日班
+	NeedEmpLow  *int64  `json:"need_emp"`    // 最低需求人數
+	NeedEmpHigh *int64  `json:"need_emp1"`   // 最高需求人數
+	StartBy     *int64  `json:"startby"`     // 上班日期：0:一週內 1:兩週 2:一個月 3:不限 4:可年後上班
 	ExpJobCat1  *string `json:"exp_jobcat1"` // 相關職務經驗
 	ExpJobCat2  *string `json:"exp_jobcat2"`
 	ExpJobCat3  *string `json:"exp_jobcat3"`
 	Desc        *string `json:"description"` // 職務描述
 	Others      *string `json:"others"`      // 其他條件
+}
+
+type JobsDBItem struct {
+	Custno      *string `json:"custno"`
+	Jobno       *int64  `json:"jobno"`
+	Job         *string `json:"job"`
+	Jobcat1     *int64  `json:"jobcat1"`
+	Jobcat2     *int64  `json:"jobcat2"`
+	Jobcat3     *int64  `json:"jobcat3"`
+	Edu         *int64  `json:"edu"`
+	SalaryLow   *int64  `json:"salary_low"`
+	SalaryHigh  *int64  `json:"salary_high"`
+	Role        *int64  `json:"role"`
+	Language1   *int64  `json:"language1"`
+	Language2   *int64  `json:"language2"`
+	Language3   *int64  `json:"language3"`
+	WorkDur     *int64  `json:"period"`
+	MajorCat1   *int64  `json:"major_cat"`
+	MajorCat2   *int64  `json:"major_cat2"`
+	MajorCat3   *int64  `json:"major_cat3"`
+	Industry    *int64  `json:"industry"`
+	Vacation    *string `json:"worktime"`
+	RoleStatus  *int64  `json:"role_status"`
+	Management  *int64  `json:"s2"`
+	BuinessTrip *int64  `json:"s3"`
+	Addrno      *int64  `json:"addr_no"`
+	WorkTime    *int64  `json:"s9"`
+	NeedEmpLow  *int64  `json:"need_emp"`
+	NeedEmpHigh *int64  `json:"need_emp1"`
+	StartBy     *int64  `json:"startby"`
+	ExpJobCat1  *int64  `json:"exp_jobcat1"`
+	ExpJobCat2  *int64  `json:"exp_jobcat2"`
+	ExpJobCat3  *int64  `json:"exp_jobcat3"`
+	Desc        *string `json:"description"`
+	Others      *string `json:"others"`
 }
