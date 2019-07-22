@@ -36,7 +36,7 @@ type UsersController struct {
 
 func (c *UsersController) get(httpLib *utils.HTTPLib) {
 
-	rows, err := db.Query("SELECT * FROM `users` ORDER BY `name")
+	rows, err := db.Query("SELECT * FROM `users` ORDER BY `name`")
 	if err != nil {
 		logs.Error(err)
 		httpLib.WriteJSON(err)
@@ -64,7 +64,6 @@ func (c *UsersController) post(httpLib *utils.HTTPLib) {
 
 	res := models.APIRes{}
 
-	httpLib.Req.ParseForm()
 	name := httpLib.Req.FormValueToNullString("name")
 	if !name.Valid {
 		res.Error = fmt.Sprintf("'%v' is necessary", "name")
@@ -79,7 +78,56 @@ func (c *UsersController) post(httpLib *utils.HTTPLib) {
 	}
 
 	// - Insert Data
-	stmt, err := db.Prepare("INSERT INTO `users` (`name`, `email`) VALUES (?, ?)")
+	tx, err := db.Begin()
+	if err != nil {
+		logs.Error(err)
+		res.Error = err.Error()
+		httpLib.WriteJSON(res)
+		return
+	}
+	// User
+	userRes, err := tx.Exec("INSERT INTO `users` (`name`, `email`) VALUES (?, ?)", name, email)
+	if err != nil {
+		logs.Error(err)
+		res.Error = err.Error()
+		httpLib.WriteJSON(res)
+		return
+	}
+	userID, err := userRes.LastInsertId()
+	if err != nil {
+		logs.Error(err)
+		res.Error = err.Error()
+		httpLib.WriteJSON(res)
+		return
+	}
+
+	// WelfareUserScore
+	rows, err := tx.Query("SELECT `id` FROM `welfares`")
+	if err != nil {
+		logs.Error(err)
+		res.Error = err.Error()
+		httpLib.WriteJSON(err)
+		return
+	}
+	defer rows.Close()
+
+	// Get `Welfares` Data
+	items := []int{}
+	for rows.Next() {
+		var item int
+		err := rows.Scan(&item)
+		if err != nil {
+			logs.Error(err)
+			res.Error = err.Error()
+			httpLib.WriteJSON(err)
+			return
+		}
+		items = append(items, item)
+		// logs.Debug("id:%v", *item)
+	}
+
+	// Insert default welfare score for the user
+	stmt, err := tx.Prepare("INSERT INTO `welfare_user_score` (`user_id`, `welfare_no`, `score`) VALUES (?, ?, ?)")
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()
@@ -88,23 +136,32 @@ func (c *UsersController) post(httpLib *utils.HTTPLib) {
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(name, email)
-	if err != nil {
-		logs.Error(err)
-		res.Error = err.Error()
-		httpLib.WriteJSON(res)
-		return
+	for _, item := range items {
+		_, err := stmt.Exec(userID, item, 1)
+		if err != nil {
+			logs.Error(err)
+			res.Error = err.Error()
+			httpLib.WriteJSON(res)
+			return
+		}
 	}
+	tx.Commit()
 
-	res.Message = fmt.Sprintf("Sucess insert {name:%v, email:%v}", name, email)
+	res.Message = fmt.Sprintf("Sucess insert {name:%v, email:%v} and %v welfares score.", name, email, len(items))
 	httpLib.WriteJSON(res)
+	return
 }
 
 func (c *UsersController) delete(httpLib *utils.HTTPLib) {
 
 	res := models.APIRes{}
 
-	id := httpLib.Req.URL.Query().Get("id")
+	id, err := httpLib.Req.FormValueToNullInt64("id")
+	if err != nil {
+		res.Error = err.Error()
+		httpLib.WriteJSON(res)
+		return
+	}
 
 	// - Delete Data
 	stmt, err := db.Prepare("DELETE FROM `users` WHERE `id` = ?")

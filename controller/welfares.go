@@ -64,8 +64,6 @@ func (c *WelfaresController) post(httpLib *utils.HTTPLib) {
 
 	res := models.APIRes{}
 
-	httpLib.Req.ParseForm()
-	welfare := models.WelfaresItem{}
 	name := httpLib.Req.FormValueToNullString("name")
 	if !name.Valid {
 		res.Error = fmt.Sprintf("'%v' is necessary", "name")
@@ -74,7 +72,56 @@ func (c *WelfaresController) post(httpLib *utils.HTTPLib) {
 	}
 
 	// - Insert Data
-	stmt, err := db.Prepare("INSERT INTO `welfares` (`name`) VALUES (?)")
+	tx, err := db.Begin()
+	if err != nil {
+		logs.Error(err)
+		res.Error = err.Error()
+		httpLib.WriteJSON(res)
+		return
+	}
+
+	// Welfares
+	welfareRes, err := tx.Exec("INSERT INTO `welfares` (`name`) VALUES (?)", name)
+	if err != nil {
+		logs.Error(err)
+		res.Error = err.Error()
+		httpLib.WriteJSON(res)
+		return
+	}
+
+	welfareNo, err := welfareRes.LastInsertId()
+	if err != nil {
+		logs.Error(err)
+		res.Error = err.Error()
+		httpLib.WriteJSON(res)
+		return
+	}
+
+	// Get Users
+	rows, err := tx.Query("SELECT `id` FROM `users`")
+	if err != nil {
+		logs.Error(err)
+		res.Error = err.Error()
+		httpLib.WriteJSON(res)
+		return
+	}
+	defer rows.Close()
+
+	items := []int{}
+	for rows.Next() {
+		var item int
+		err := rows.Scan(&item)
+		if err != nil {
+			logs.Error(err)
+			res.Error = err.Error()
+			httpLib.WriteJSON(res)
+			return
+		}
+		items = append(items, item)
+	}
+
+	// WelfareUserScore
+	stmt, err := tx.Prepare("INSERT INTO `welfare_user_score` (`user_id`, `welfare_no`, `score`) VALUES (?, ?, ?)")
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()
@@ -83,15 +130,19 @@ func (c *WelfaresController) post(httpLib *utils.HTTPLib) {
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(name)
-	if err != nil {
-		logs.Error(err)
-		res.Error = err.Error()
-		httpLib.WriteJSON(res)
-		return
+	for _, item := range items {
+		_, err := stmt.Exec(item, welfareNo, 1)
+		if err != nil {
+			logs.Error(err)
+			res.Error = err.Error()
+			httpLib.WriteJSON(res)
+			return
+		}
 	}
 
-	res.Message = fmt.Sprintf("Sucess insert {name:%v}", *welfare.Name)
+	tx.Commit()
+
+	res.Message = fmt.Sprintf("Sucess insert welfare = {name:%v}. And sync to %v user.", name, len(items))
 	httpLib.WriteJSON(res)
 }
 
