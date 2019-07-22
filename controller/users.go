@@ -65,24 +65,20 @@ func (c *UsersController) post(httpLib *utils.HTTPLib) {
 	res := models.APIRes{}
 
 	httpLib.Req.ParseForm()
-	user := models.UsersItem{}
-	nameVal := httpLib.Req.FormValue("name")
-	emailVal := httpLib.Req.FormValue("email")
-
-	if nameVal == "" {
-		res.Error = "'name' is necessary."
+	name := httpLib.Req.FormValueToNullString("name")
+	if !name.Valid {
+		res.Error = fmt.Sprintf("'%v' is necessary", "name")
 		httpLib.WriteJSON(res)
 		return
 	}
-	user.Name = &nameVal
-	if emailVal != "" {
-		user.Email = &emailVal
+	email := httpLib.Req.FormValueToNullString("email")
+	if !email.Valid {
+		res.Error = fmt.Sprintf("'%v' is necessary", "email")
+		httpLib.WriteJSON(res)
+		return
 	}
 
 	// - Insert Data
-	name := utils.NewNullString(user.Name)
-	email := utils.NewNullString(user.Email)
-
 	stmt, err := db.Prepare("INSERT INTO `users` (`name`, `email`) VALUES (?, ?)")
 	if err != nil {
 		logs.Error(err)
@@ -100,7 +96,7 @@ func (c *UsersController) post(httpLib *utils.HTTPLib) {
 		return
 	}
 
-	res.Message = fmt.Sprintf("Sucess insert {name:%v, email:%v}", *user.Name, *user.Email)
+	res.Message = fmt.Sprintf("Sucess insert {name:%v, email:%v}", name, email)
 	httpLib.WriteJSON(res)
 }
 

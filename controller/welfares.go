@@ -66,18 +66,14 @@ func (c *WelfaresController) post(httpLib *utils.HTTPLib) {
 
 	httpLib.Req.ParseForm()
 	welfare := models.WelfaresItem{}
-	nameVal := httpLib.Req.FormValue("name")
-
-	if nameVal == "" {
-		res.Error = "'name' is necessary."
+	name := httpLib.Req.FormValueToNullString("name")
+	if !name.Valid {
+		res.Error = fmt.Sprintf("'%v' is necessary", "name")
 		httpLib.WriteJSON(res)
 		return
 	}
-	welfare.Name = &nameVal
 
 	// - Insert Data
-	name := utils.NewNullString(welfare.Name)
-
 	stmt, err := db.Prepare("INSERT INTO `welfares` (`name`) VALUES (?)")
 	if err != nil {
 		logs.Error(err)
