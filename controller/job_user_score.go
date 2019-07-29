@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Hao1995/104hackathon/glob"
 	"github.com/Hao1995/104hackathon/models"
 	"github.com/Hao1995/104hackathon/utils"
 	"github.com/astaxie/beego/logs"
@@ -171,17 +172,15 @@ func (c *JobUserScoreController) post(httpLib *utils.HTTPLib) {
 	}
 
 	// Get Score of each User and Job
-	tx, err := db.Begin()
 	for _, user := range users {
-		if err != nil {
-			logs.Error(err)
-			res.Error = err.Error()
-			httpLib.WriteJSON(res)
-			return
-		}
+
+		size := glob.MySQLUpperPlaceholders / 4 // job, user, goodScore, badScore
+		var sqlStr string
+		var count int
+		var vals []interface{}
 		for _, job := range jobs {
 			// Calculate Score
-			rows, err := tx.Query("SELECT `WUS`.`score` AS `score` FROM `job_welfares` AS `JW`, `welfare_user_score` AS `WUS` WHERE 1 = 1 AND `JW`.`welfare_no` = `WUS`.`welfare_no` AND `WUS`.`user_id` = ? AND `JW`.`jobno` = ?", user, job)
+			rows, err := db.Query("SELECT `WUS`.`score` AS `score` FROM `job_welfares` AS `JW`, `welfare_user_score` AS `WUS` WHERE 1 = 1 AND `JW`.`welfare_no` = `WUS`.`welfare_no` AND `WUS`.`user_id` = ? AND `JW`.`jobno` = ?", user, job)
 			if err != nil {
 				logs.Error(err)
 				res.Error = err.Error()
@@ -209,15 +208,27 @@ func (c *JobUserScoreController) post(httpLib *utils.HTTPLib) {
 			}
 
 			// Insert Score Data.
-			if _, err := tx.Exec("INSERT INTO `job_user_score` (`jobno`, `user_id`, `good_score`, `bad_score`) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE `good_score` = VALUES(`good_score`), `bad_score` = VALUES(`bad_score`);", job, user, goodScore, badScore); err != nil {
-				logs.Error(err)
-				res.Error = err.Error()
-				httpLib.WriteJSON(res)
-				return
+			if count == 0 {
+				sqlStr = "INSERT INTO `job_user_score` (`jobno`, `user_id`, `good_score`, `bad_score`) VALUES "
+				vals = []interface{}{}
+			}
+			if count < size {
+				sqlStr += "(?, ?, ?, ?),"
+				vals = append(vals, job, user, goodScore, badScore)
+			}
+			if count == size-1 {
+				sqlStr = sqlStr[0 : len(sqlStr)-1]
+				sqlStr += " ON DUPLICATE KEY UPDATE `good_score` = VALUES(`good_score`), `bad_score` = VALUES(`bad_score`);"
+				if _, err := db.Exec(sqlStr, vals...); err != nil {
+					logs.Error(err)
+					res.Error = err.Error()
+					httpLib.WriteJSON(res)
+					return
+				}
+				count = 0
 			}
 		}
 	}
-	tx.Commit()
 
 	res.Message = fmt.Sprintf("Sucess synchronize the welfares score of %v jobs and %v users.", len(jobs), len(users))
 	httpLib.WriteJSON(res)

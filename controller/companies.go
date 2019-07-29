@@ -2,14 +2,11 @@ package controller
 
 import (
 	"bufio"
-	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"reflect"
-	"strings"
 	"sync"
 
 	"github.com/Hao1995/104hackathon/config"
@@ -206,44 +203,4 @@ func syncCompaniesInsertData(wg *sync.WaitGroup, guard chan struct{}, errChan ch
 
 	<-guard
 	return
-}
-
-//HackathonCompanies ...
-func HackathonCompanies(res http.ResponseWriter, req *http.Request) {
-	//=====Params
-	req.ParseForm()
-	params := make(map[string]interface{})
-	for k, v := range req.Form {
-		switch k {
-		case "size":
-			params[k] = strings.Join(v, "")
-			// case "message":
-			// 	params[k] = strings.Join(v, "")
-		}
-	}
-
-	var rows *sql.Rows
-	var err error
-	if v, ok := params["size"]; ok {
-		rows, err = db.Query("SELECT * FROM companies LIMIT " + v.(string))
-	} else {
-		rows, err = db.Query("SELECT * FROM companies LIMIT 100")
-	}
-	rows.Close()
-
-	companies := []*models.Company{}
-
-	for rows.Next() {
-		r := &models.Company{}
-
-		err = rows.Scan(&r.Custno, &r.Invoice, &r.Name, &r.Profile, &r.Management, &r.Welfare, &r.Product)
-		chechkErr(err)
-		companies = append(companies, r)
-	}
-
-	jsonData, err := json.Marshal(companies)
-	if err != nil {
-		chechkErr(err)
-	}
-	io.WriteString(res, string(jsonData))
 }

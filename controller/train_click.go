@@ -2,6 +2,7 @@ package controller
 
 import (
 	"bufio"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,6 +18,7 @@ import (
 	"github.com/Hao1995/104hackathon/config"
 	"github.com/Hao1995/104hackathon/glob"
 	"github.com/Hao1995/104hackathon/models"
+	"github.com/Hao1995/104hackathon/utils"
 	"github.com/astaxie/beego/logs"
 )
 
@@ -171,6 +173,71 @@ func QueryKey(res http.ResponseWriter, req *http.Request) {
 	//===== Complete
 	io.WriteString(res, "Complete")
 }
+
+//ParseTrainClick ...
+func ParseTrainClick(fileName string) {
+	raw, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	// c := []*models.Job{}
+	c := []*models.TrainClick{}
+	err = json.Unmarshal(raw, &c)
+	if err != nil {
+		fmt.Println(err.Error())
+		FailFile = append(FailFile, fileName)
+		return
+	}
+
+	for _, v := range c {
+		// InsertToJob(fileName, v) //job
+		trainClcikInsert(fileName, v) //companies
+	}
+}
+
+//TrainClcikInsert ...
+func trainClcikInsert(fileName string, v *models.TrainClick) {
+	mu.Lock()
+	for {
+		if dbConnentCount < dbConnentCountMax {
+			break
+		}
+	}
+	stmt, err := db.Prepare("INSERT INTO train_click(`action`, `jobno`, `date`, `joblist`, `querystring`, `source`) VALUES(?,?,?,?,?,?)")
+	defer stmt.Close()
+	dbConnentCount++
+
+	for {
+		if dbConnentCount < dbConnentCountMax {
+			break
+		}
+	}
+	chechkErr(err)
+
+	jobList := "["
+	for _, job := range v.Joblist {
+		jobList = jobList + job + ","
+	}
+	jobListByte := []byte(jobList)
+	jobListByte = jobListByte[:len(jobList)-1]
+
+	jobListFinal := string(jobListByte) + "]"
+	// fmt.Println("[jobListByte] ", jobListFinal)
+
+	_, err = stmt.Exec(v.Action, v.Jobno, v.Date, jobListFinal, v.QueryString, v.Source)
+	dbConnentCount++
+	mu.Unlock()
+	if err != nil {
+		fmt.Printf("[ERROR][%v][%v] Content :%v \n", fileName, err, *v)
+	}
+
+	dbConnentCount--
+	dbConnentCount--
+}
+
+// --- New
 
 // SyncTrainClick :
 // Sync the train-click data to DB
@@ -392,65 +459,120 @@ func syncTrainClickInsertData(wg *sync.WaitGroup, guard chan struct{}, errChan c
 	return
 }
 
-//ParseTrainClick ...
-func ParseTrainClick(fileName string) {
-	raw, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
+// SyncTrainClickKey :
+// Sync the key that within querystring to DB
 
-	// c := []*models.Job{}
-	c := []*models.TrainClick{}
-	err = json.Unmarshal(raw, &c)
-	if err != nil {
-		fmt.Println(err.Error())
-		FailFile = append(FailFile, fileName)
-		return
-	}
+func SyncTrainClickKey(w http.ResponseWriter, req *http.Request) {
 
-	for _, v := range c {
-		// InsertToJob(fileName, v) //job
-		trainClcikInsert(fileName, v) //companies
+	ins := &SyncTrainClickKeyController{}
+	httpLib := &utils.HTTPLib{}
+	httpLib.Init(w, req)
+
+	res := models.APIRes{}
+
+	switch req.Method {
+	// case http.MethodGet:
+	// ins.get(httpLib)
+	case http.MethodPost:
+		ins.post(httpLib)
+	// case http.MethodDelete:
+	// ins.delete(httpLib)
+	default:
+		res.Error = fmt.Sprintf("There is no way correspond to method '%v'", req.Method)
+		httpLib.WriteJSON(res)
+		return
 	}
 }
 
-//TrainClcikInsert ...
-func trainClcikInsert(fileName string, v *models.TrainClick) {
-	mu.Lock()
-	for {
-		if dbConnentCount < dbConnentCountMax {
-			break
-		}
-	}
-	stmt, err := db.Prepare("INSERT INTO train_click(`action`, `jobno`, `date`, `joblist`, `querystring`, `source`) VALUES(?,?,?,?,?,?)")
-	defer stmt.Close()
-	dbConnentCount++
+type SyncTrainClickKeyController struct {
+}
 
-	for {
-		if dbConnentCount < dbConnentCountMax {
-			break
-		}
-	}
-	chechkErr(err)
+func (c *SyncTrainClickKeyController) post(httpLib *utils.HTTPLib) {
 
-	jobList := "["
-	for _, job := range v.Joblist {
-		jobList = jobList + job + ","
-	}
-	jobListByte := []byte(jobList)
-	jobListByte = jobListByte[:len(jobList)-1]
+	res := models.APIRes{}
 
-	jobListFinal := string(jobListByte) + "]"
-	// fmt.Println("[jobListByte] ", jobListFinal)
+	// // - Init Parameters
+	// jobno, err := httpLib.Req.FormValueToNullInt64("jobno")
+	// if err != nil {
+	// 	res.Error = err.Error()
+	// 	httpLib.WriteJSON(res)
+	// 	return
+	// }
 
-	_, err = stmt.Exec(v.Action, v.Jobno, v.Date, jobListFinal, v.QueryString, v.Source)
-	dbConnentCount++
-	mu.Unlock()
+	// userID, err := httpLib.Req.FormValueToNullInt64("user_id")
+	// if err != nil {
+	// 	res.Error = err.Error()
+	// 	httpLib.WriteJSON(res)
+	// 	return
+	// }
+
+	// - Sync Data
+	// Get job info
+	rows, err := db.Query("SELECT `id`, `querystring` FROM `train_click`")
 	if err != nil {
-		fmt.Printf("[ERROR][%v][%v] Content :%v \n", fileName, err, *v)
+		logs.Error(err)
+		res.Error = err.Error()
+		httpLib.WriteJSON(res)
+		return
+	}
+	defer rows.Close()
+
+	tx, err := db.Begin()
+	if err != nil {
+		logs.Error(err)
+		res.Error = err.Error()
+		httpLib.WriteJSON(res)
+		return
 	}
 
-	dbConnentCount--
-	dbConnentCount--
+	var notFindKeyword, notFindQueryString, findKeyword int
+	for rows.Next() {
+		var id *int
+		var querystring *string
+		err := rows.Scan(&id, &querystring)
+		if err != nil {
+			logs.Error(err)
+			res.Error = err.Error()
+			httpLib.WriteJSON(res)
+			return
+		}
+
+		// Get keyword
+		var key sql.NullString
+		if *querystring != "" {
+			str := "localhost/?" + *querystring
+			u, err := url.Parse(str)
+			if err != nil {
+				logs.Error(err)
+				res.Error = err.Error()
+				httpLib.WriteJSON(res)
+				return
+			}
+			m, _ := url.ParseQuery(u.RawQuery)
+			if _, ok := m["keyword"]; ok {
+				val := m["keyword"][0]
+				key = utils.NewNullString(&val)
+				findKeyword++
+			} else {
+				notFindKeyword++
+			}
+		} else {
+			notFindQueryString++
+		}
+
+		// Insert Key
+		_, err = tx.Exec("UPDATE `train_click` SET `key` = ? WHERE `id` = ?", key, *id)
+		if err != nil {
+			logs.Error(err)
+			res.Error = err.Error()
+			httpLib.WriteJSON(res)
+			return
+		}
+	}
+
+	tx.Commit()
+
+	res.Message = fmt.Sprintf("No querystring = %v. No keyword = %v. Success insert = %v", notFindQueryString, notFindKeyword, findKeyword)
+	httpLib.WriteJSON(res)
+	return
 }

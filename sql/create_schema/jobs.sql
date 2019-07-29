@@ -31,5 +31,17 @@ CREATE TABLE `104hackathon-welfare`.`jobs` (
   `exp_jobcat3` BIGINT(11) UNSIGNED UNSIGNED NULL,
   `desc` TEXT NULL,
   `others` TEXT NULL,
-  PRIMARY KEY (`jobno`))
+  PRIMARY KEY (`jobno`),
+  KEY `custno` (`custno`),
+  KEY `major_cat1` (`major_cat1`),
+  KEY `major_cat2` (`major_cat2`),
+  KEY `major_cat3` (`major_cat3`),
+  KEY `industry` (`industry`),
+  KEY `addr_no` (`addr_no`),
+  CONSTRAINT `jobs_ibfk_1` FOREIGN KEY (`custno`) REFERENCES `companies` (`custno`) ON UPDATE CASCADE,
+  CONSTRAINT `jobs_ibfk_2` FOREIGN KEY (`major_cat1`) REFERENCES `departments` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `jobs_ibfk_3` FOREIGN KEY (`major_cat2`) REFERENCES `departments` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `jobs_ibfk_4` FOREIGN KEY (`major_cat3`) REFERENCES `departments` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `jobs_ibfk_5` FOREIGN KEY (`industry`) REFERENCES `industries` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `jobs_ibfk_6` FOREIGN KEY (`addr_no`) REFERENCES `districts` (`id`) ON UPDATE CASCADE)
 ENGINE = InnoDB;
