@@ -41,12 +41,13 @@ func (c *JobUserScoreController) get(httpLib *utils.HTTPLib) {
 	// Init Params
 	jobno, err := httpLib.Req.FormValueToNullInt64("jobno")
 	if err != nil {
-		res.Error = &err
+		tmp := err.Error()
+		res.Error = &tmp
 		httpLib.WriteJSON(res)
 		return
 	}
 	if !jobno.Valid {
-		err := fmt.Errorf("'%v' is necessary", "jobno")
+		err := fmt.Sprintf("'%v' is necessary", "jobno")
 		res.Error = &err
 		httpLib.WriteJSON(res)
 		return
@@ -54,22 +55,24 @@ func (c *JobUserScoreController) get(httpLib *utils.HTTPLib) {
 
 	userID, err := httpLib.Req.FormValueToNullInt64("user_id")
 	if err != nil {
-		res.Error = &err
+		tmp := err.Error()
+		res.Error = &tmp
 		httpLib.WriteJSON(res)
 		return
 	}
 	if !userID.Valid {
-		err := fmt.Errorf("'%v' is necessary", "user_id")
+		err := fmt.Sprintf("'%v' is necessary", "user_id")
 		res.Error = &err
 		httpLib.WriteJSON(res)
 		return
 	}
 
 	// - Company Name and Job Name and Total Score
-	err = db.QueryRow("SELECT `C`.`custno`, `C`.`name` AS `cust_name`, `J`.`jobno` AS `jobno`, `J`.`job` AS `job_name`, `JUS`.`score` FROM `job_user_score` AS `JUS`, `jobs` AS `J`, `companies` AS `C` WHERE 1 = 1 AND `JUS`.`jobno` = `J`.`jobno` AND `J`.`custno` = `C`.`custno` AND `JUS`.`jobno` = ? AND `JUS`.`user_id` = ?", jobno, userID).Scan(&res.Custno, &res.CustName, &res.JobNo, &res.JobName, &res.Score)
+	err = db.QueryRow("SELECT `C`.`custno`, `C`.`name` AS `cust_name`, `J`.`jobno` AS `jobno`, `J`.`job` AS `job_name`, `JUS`.`good_score`, `JUS`.`bad_score` FROM `job_user_score` AS `JUS`, `jobs` AS `J`, `companies` AS `C` WHERE 1 = 1 AND `JUS`.`jobno` = `J`.`jobno` AND `J`.`custno` = `C`.`custno` AND `JUS`.`jobno` = ? AND `JUS`.`user_id` = ?", jobno, userID).Scan(&res.Custno, &res.CustName, &res.JobNo, &res.JobName, &res.GoodScore, &res.BadScore)
 	if err != nil {
-		logs.Error(err)
-		res.Error = &err
+		tmp := err.Error()
+		logs.Error(tmp)
+		res.Error = &tmp
 		httpLib.WriteJSON(res)
 		return
 	}
@@ -77,8 +80,9 @@ func (c *JobUserScoreController) get(httpLib *utils.HTTPLib) {
 	// - Get the Welfares and Each Score
 	rows, err := db.Query("SELECT `W`.`id` AS `welfare_no`, `W`.`name` AS `welfare_name`, `WUS`.`score` FROM `job_welfares` AS `JW`, `welfares` AS `W`, `welfare_user_score` AS `WUS` WHERE 1 = 1 AND `JW`.`welfare_no` = `W`.`id` AND `W`.`id` = `WUS`.`welfare_no` AND `JW`.`jobno` = ? AND `WUS`.`user_id` = ? ORDER BY `welfare_no`", jobno, userID)
 	if err != nil {
-		logs.Error(err)
-		res.Error = &err
+		tmp := err.Error()
+		logs.Error(tmp)
+		res.Error = &tmp
 		httpLib.WriteJSON(err)
 		return
 	}
@@ -135,8 +139,7 @@ func (c *JobUserScoreController) post(httpLib *utils.HTTPLib) {
 	var jobs []int
 	for rows.Next() {
 		var job int
-		err := rows.Scan(&job)
-		if err != nil {
+		if err := rows.Scan(&job); err != nil {
 			logs.Error(err)
 			res.Error = err.Error()
 			httpLib.WriteJSON(res)
@@ -158,8 +161,7 @@ func (c *JobUserScoreController) post(httpLib *utils.HTTPLib) {
 	var users []int
 	for rows.Next() {
 		var user int
-		err := rows.Scan(&user)
-		if err != nil {
+		if err := rows.Scan(&user); err != nil {
 			logs.Error(err)
 			res.Error = err.Error()
 			httpLib.WriteJSON(res)
@@ -179,19 +181,35 @@ func (c *JobUserScoreController) post(httpLib *utils.HTTPLib) {
 		}
 		for _, job := range jobs {
 			// Calculate Score
-			var score *int64
-			row := tx.QueryRow("SELECT IFNULL(SUM(`WUS`.`score`), 0) AS `score` FROM `job_welfares` AS `JW`, `welfare_user_score` AS `WUS` WHERE 1 = 1 AND `JW`.`welfare_no` = `WUS`.`welfare_no` AND `WUS`.`user_id` = ? AND `JW`.`jobno` = ?", user, job)
-			err := row.Scan(&score)
+			rows, err := tx.Query("SELECT `WUS`.`score` AS `score` FROM `job_welfares` AS `JW`, `welfare_user_score` AS `WUS` WHERE 1 = 1 AND `JW`.`welfare_no` = `WUS`.`welfare_no` AND `WUS`.`user_id` = ? AND `JW`.`jobno` = ?", user, job)
 			if err != nil {
 				logs.Error(err)
 				res.Error = err.Error()
 				httpLib.WriteJSON(res)
 				return
 			}
+			defer rows.Close()
+
+			var goodScore, badScore int64
+			for rows.Next() {
+				var score *int64
+				if err := rows.Scan(&score); err != nil {
+					logs.Error(err)
+					res.Error = err.Error()
+					httpLib.WriteJSON(res)
+					return
+				}
+
+				switch {
+				case *score > 0:
+					goodScore += *score
+				case *score < 0:
+					badScore += *score
+				}
+			}
 
 			// Insert Score Data.
-			_, err = tx.Exec("INSERT INTO `job_user_score` (`jobno`, `user_id`, `score`) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE `score` = VALUES(`score`);", job, user, score)
-			if err != nil {
+			if _, err := tx.Exec("INSERT INTO `job_user_score` (`jobno`, `user_id`, `good_score`, `bad_score`) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE `good_score` = VALUES(`good_score`), `bad_score` = VALUES(`bad_score`);", job, user, goodScore, badScore); err != nil {
 				logs.Error(err)
 				res.Error = err.Error()
 				httpLib.WriteJSON(res)
