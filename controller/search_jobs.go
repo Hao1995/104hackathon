@@ -257,63 +257,6 @@ func (c *SearchJobsController) getJobsScoreAndTotalScore(jobMap map[int64]bool) 
 	return jobsScore, goodScore, badScore, nil
 }
 
-// func (c *SearchJobsController) getJobsPRAndTotalPR(jobsScore []models.JobUserScoreGetItem, goodScore, badScore, countJobs int64) (models.SearchJobsScoreItem, []models.SearchJobsListItem, error) {
-
-// 	countryScore := models.SearchJobsScoreItem{}
-// 	jobListScore := []models.SearchJobsListItem{}
-
-// 	// Calculate Country PR
-// 	var avgGoodScore, avgBadScore float64
-// 	if tmpLen := len(jobsScore); tmpLen != 0 {
-// 		avgGoodScore = float64(goodScore) / float64(tmpLen)
-// 		avgBadScore = float64(badScore) / float64(tmpLen)
-// 	}
-// 	logs.Debug("Average good-score = %v, bad-score = %v", avgGoodScore, avgBadScore)
-
-// 	now := time.Now()
-// 	var goodPR, badPR float64
-// 	if err := db.QueryRow("SELECT COUNT(1) AS `count` FROM `job_user_score` WHERE `user_id` = ? AND `good_score` < ?", c.params.UserID, avgGoodScore).Scan(&goodPR); err != nil {
-// 		return countryScore, nil, err
-// 	}
-// 	goodPR /= float64(countJobs)
-// 	countryScore.GoodScore = &goodPR
-// 	if err := db.QueryRow("SELECT COUNT(1) AS `count` FROM `job_user_score` WHERE `user_id` = ? AND `bad_score` > ?", c.params.UserID, avgBadScore).Scan(&badPR); err != nil {
-// 		return countryScore, nil, err
-// 	}
-// 	badPR /= float64(countJobs)
-// 	countryScore.BadScore = &badPR
-// 	logs.Debug("Country Good PR = %v, Bad PR = %v", goodPR, badPR)
-// 	logs.Info("getPRofTotal = %v", time.Since(now))
-
-// 	// Calculate jobList PR
-// 	now = time.Now()
-// 	startIdx := (c.params.Pi.Int64 - 1) * c.params.Ps.Int64
-// 	endIdx := c.params.Pi.Int64 * c.params.Ps.Int64
-// 	for _, item := range jobsScore[startIdx:endIdx] {
-// 		jobScore := models.SearchJobsListItem{}
-// 		var goodPR, badPR float64
-// 		if err := db.QueryRow("SELECT COUNT(1) AS `count` FROM `job_user_score` WHERE `user_id` = ? AND `good_score` < ?", c.params.UserID, item.GoodScore).Scan(&goodPR); err != nil {
-// 			return countryScore, nil, err
-// 		}
-// 		goodPR /= float64(countJobs)
-// 		jobScore.GoodScore = &goodPR
-// 		if err := db.QueryRow("SELECT COUNT(1) AS `count` FROM `job_user_score` WHERE `user_id` = ? AND `bad_score` > ?", c.params.UserID, item.BadScore).Scan(&badPR); err != nil {
-// 			return countryScore, nil, err
-// 		}
-// 		badPR /= float64(countJobs)
-// 		jobScore.BadScore = &badPR
-
-// 		if err := db.QueryRow("SELECT `J`.`job` AS `job_name`, `C`.`name` AS `cust_name` FROM `jobs` AS `J`, `companies` AS `C` WHERE 1 = 1 AND `J`.`custno` = `C`.`custno` AND `J`.`jobno` = ?", item.JobNo).Scan(&jobScore.JobName, &jobScore.JobCompany); err != nil {
-// 			return countryScore, nil, err
-// 		}
-
-// 		jobListScore = append(jobListScore, jobScore)
-// 	}
-// 	logs.Info("getPRofJobs = %v", time.Since(now))
-
-// 	return countryScore, jobListScore, nil
-// }
-
 func (c *SearchJobsController) getJobsPRAndTotalPR(jobsScore []models.JobUserScoreGetItem, goodScore, badScore, countJobs int64) (models.SearchJobsScoreItem, []models.SearchJobsListItem, error) {
 
 	countryScore := models.SearchJobsScoreItem{}
