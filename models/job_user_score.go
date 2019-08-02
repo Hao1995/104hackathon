@@ -16,3 +16,10 @@ type JobUserScoreGetChildItem struct {
 	WelfareName *string `json:"welfare_name"`
 	Score       *int64  `json:"score"`
 }
+
+type JobUserScoreDBItem struct {
+	JobNo     *int64 `json:"jobno"`
+	UserID    *int64 `json:"user_id"`
+	GoodScore *int64 `json:"good_score"`
+	BadScore  *int64 `json:"bad_score"`
+}

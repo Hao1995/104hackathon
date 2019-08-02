@@ -5,3 +5,5 @@ data/
 mybinary
 __debug_bin
 controller/test.go
+cover.txt
+cover.html
