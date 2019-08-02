@@ -1,2 +1,2 @@
-CREATE DATABASE IF NOT EXISTS `104hackathon-welfare`;
-USE `104hackathon-welfare`;
+CREATE DATABASE IF NOT EXISTS `104hackathon-welfare-1st`;
+USE `104hackathon-welfare-1st`;

@@ -1,4 +1,4 @@
-CREATE TABLE `104hackathon-welfare`.`job` (
+CREATE TABLE `104hackathon-welfare-1st`.`job` (
   `custno` VARCHAR(40) NOT NULL,
   `jobno` INT UNSIGNED NULL,
   `job` TEXT NULL,

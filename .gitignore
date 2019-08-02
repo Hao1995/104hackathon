@@ -3,3 +3,6 @@ app.conf
 .vscode/launch.json
 data/
 mybinary
+cover.txt
+cover.html
+controller/test.go
