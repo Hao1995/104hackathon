@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Hao1995/104hackathon/glob"
 	"github.com/Hao1995/104hackathon/models"
 	"github.com/Hao1995/104hackathon/utils"
 	"github.com/astaxie/beego/logs"
@@ -36,7 +37,7 @@ type WelfaresController struct {
 
 func (c *WelfaresController) get(httpLib *utils.HTTPLib) {
 
-	rows, err := db.Query("SELECT * FROM `welfares` ORDER BY `name`")
+	rows, err := glob.DB.Query("SELECT * FROM `welfares` ORDER BY `name`")
 	if err != nil {
 		logs.Error(err)
 		httpLib.WriteJSON(err)
@@ -72,7 +73,7 @@ func (c *WelfaresController) post(httpLib *utils.HTTPLib) {
 	}
 
 	// - Insert Data
-	tx, err := db.Begin()
+	tx, err := glob.DB.Begin()
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()
@@ -153,7 +154,7 @@ func (c *WelfaresController) delete(httpLib *utils.HTTPLib) {
 	id := httpLib.Req.URL.Query().Get("id")
 
 	// - Delete Data
-	stmt, err := db.Prepare("DELETE FROM `welfares` WHERE `id` = ?")
+	stmt, err := glob.DB.Prepare("DELETE FROM `welfares` WHERE `id` = ?")
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()

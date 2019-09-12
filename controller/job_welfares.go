@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Hao1995/104hackathon/glob"
 	"github.com/Hao1995/104hackathon/models"
 	"github.com/Hao1995/104hackathon/utils"
 	"github.com/astaxie/beego/logs"
@@ -53,7 +54,7 @@ func (c *JobWelfaresController) get(httpLib *utils.HTTPLib) {
 	}
 
 	// - Company Name and Job Name
-	row := db.QueryRow("SELECT `C`.`custno` AS `custno`, `C`.`name` AS `cust_name`, `J`.`jobno` AS `jobno` , `J`.`job` AS `job_name` FROM `job_welfares` AS `JW`, `jobs` AS `J`, `companies` AS `C` WHERE `JW`.`jobno` = `J`.`jobno` AND `J`.`custno` = `C`.`custno` AND `JW`.`jobno` = ?", jobNo)
+	row := glob.DB.QueryRow("SELECT `C`.`custno` AS `custno`, `C`.`name` AS `cust_name`, `J`.`jobno` AS `jobno` , `J`.`job` AS `job_name` FROM `job_welfares` AS `JW`, `jobs` AS `J`, `companies` AS `C` WHERE `JW`.`jobno` = `J`.`jobno` AND `J`.`custno` = `C`.`custno` AND `JW`.`jobno` = ?", jobNo)
 	err = row.Scan(&res.Custno, &res.CustName, &res.JobNo, &res.JobName)
 	if err != nil {
 		logs.Error(err)
@@ -63,7 +64,7 @@ func (c *JobWelfaresController) get(httpLib *utils.HTTPLib) {
 	}
 
 	// - Get the Welfares
-	stmt, err := db.Prepare("SELECT `W`.`id` AS `welare_no`, `W`.`name` AS `welare_name` FROM `job_welfares` AS `JW`, `welfares` AS `W` WHERE `JW`.`welfare_no` = `W`.`id` AND `JW`.`jobno` = ?")
+	stmt, err := glob.DB.Prepare("SELECT `W`.`id` AS `welare_no`, `W`.`name` AS `welare_name` FROM `job_welfares` AS `JW`, `welfares` AS `W` WHERE `JW`.`welfare_no` = `W`.`id` AND `JW`.`jobno` = ?")
 	if err != nil {
 		logs.Error(err)
 		res.Error = &err
@@ -112,7 +113,7 @@ func (c *JobWelfaresController) post(httpLib *utils.HTTPLib) {
 	}
 
 	// - Sync Data
-	tx, err := db.Begin()
+	tx, err := glob.DB.Begin()
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()
@@ -210,7 +211,7 @@ func (c *JobWelfaresController) delete(httpLib *utils.HTTPLib) {
 	}
 
 	// - Delete Data
-	exeRes, err := db.Exec("DELETE FROM `job_welfares` WHERE `jobno` = ?", jobno)
+	exeRes, err := glob.DB.Exec("DELETE FROM `job_welfares` WHERE `jobno` = ?", jobno)
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()

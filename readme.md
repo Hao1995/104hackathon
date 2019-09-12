@@ -15,20 +15,46 @@ Maybe we will get a completely different result of welfare score.
 [2018-104Hackathon-AppWebService](https://github.com/104corp/2018-104Hackathon-AppWebService)
 
 ## Install
-### Create DataBase
-* Import ata that I have been completed.   
-    [[Data Link]](https://drive.google.com/open?id=15TetTLofxwuY7VzjKVlj-Vx61mKKopFz)
-* Create a schema and name it '104hackathon-welfare'. Then produce the data by yourself.   
-    *Not yet complete the detail.*
 ### Download the API service
 ```
 go get -u -v github.com/Hao1995/104hackathon
 ```
 ### Enter your DB info
-Copy your app.conf from example.conf
+Copy an app.conf from example.conf
+### Create DataBase
+* Import data that I have been completed.   
+    [[Data Link]](https://drive.google.com/drive/folders/1NGbvKBhIuSH1Dm_krbTeLBA5_97JJNqy?usp=sharing)
+* Create a schema and name it '104hackathon-welfare'. Then produce the data by yourself.    
+    * Create tables from floder "/sql/create_schema"
+        1. users
+        2. categories
+        3. companies
+        4. jobs
+        5. welfares
+        6. job_welfares
+        7. welfare_user_score
+        8. job_user_score
+        9. train_action
+        10. train_click
+    * Synchronize 104hackathon open data.
+        1. /api/sync/categories
+        2. /api/sync/companies
+        3. /api/sync/jobs
+        4. /api/sync/train_click
+        5. /api/sync/train_click/key
+        6. /api/sync/train_action
+    * Adding the foreign key.
+        * /sql/create_schema/build_fk.sql
+    * Add other info by manipulated.
+        1. /api/welfare
+        2. /api/user (Will add data to welfare_user_score)
+        3. /api/user/welfare/score (Adjust the score of each welfare of each user)
+        4. /api/job/welfare
+        5. /api/user/job/score
 
 ## Manual
-More detail  
+*-More detail-*
+
 ### country_id
 Enter the city id to searching data.     
 

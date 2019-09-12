@@ -29,7 +29,7 @@ func SyncTrainAction(w http.ResponseWriter, req *http.Request) {
 
 	// - Get the size of train_action data
 	var trainActionIdx int
-	rows, err := db.Query("SELECT COUNT(1) FROM `train_action`")
+	rows, err := glob.DB.Query("SELECT COUNT(1) FROM `train_action`")
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()
@@ -196,7 +196,7 @@ func syncTrainActionInsertData(wg *sync.WaitGroup, guard chan struct{}, errChan 
 	}
 	sqlStr = sqlStr[0 : len(sqlStr)-1]
 	// logs.Trace(sqlStr)
-	stmt, err := db.Prepare(sqlStr)
+	stmt, err := glob.DB.Prepare(sqlStr)
 	if err != nil {
 		logs.Error(err)
 		select {

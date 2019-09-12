@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Hao1995/104hackathon/glob"
 	"github.com/Hao1995/104hackathon/models"
 	"github.com/Hao1995/104hackathon/utils"
 	"github.com/astaxie/beego/logs"
@@ -51,7 +52,7 @@ func (c *WelfareUserScoreController) get(httpLib *utils.HTTPLib) {
 		return
 	}
 
-	stmt, err := db.Prepare("SELECT `W`.`name`, `WU`.`score` FROM `welfare_user_score` AS `WU`, `welfares` AS `W` WHERE `WU`.`welfare_no` = `W`.`id` AND `WU`.`user_id` = ? ORDER BY `name`")
+	stmt, err := glob.DB.Prepare("SELECT `W`.`name`, `WU`.`score` FROM `welfare_user_score` AS `WU`, `welfares` AS `W` WHERE `WU`.`welfare_no` = `W`.`id` AND `WU`.`user_id` = ? ORDER BY `name`")
 	if err != nil {
 		logs.Error(err)
 		httpLib.WriteJSON(err)
@@ -117,7 +118,7 @@ func (c *WelfareUserScoreController) post(httpLib *utils.HTTPLib) {
 	}
 
 	// - Insert Data
-	stmt, err := db.Prepare("INSERT INTO `welfare_user_score` (`user_id`, `welfare_no`, `score`) VALUES (?, ?, ?)")
+	stmt, err := glob.DB.Prepare("INSERT INTO `welfare_user_score` (`user_id`, `welfare_no`, `score`) VALUES (?, ?, ?)")
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()
@@ -167,7 +168,7 @@ func (c *WelfareUserScoreController) delete(httpLib *utils.HTTPLib) {
 	}
 
 	// - Delete Data
-	stmt, err := db.Prepare("DELETE FROM `welfare_user_score` WHERE `user_id` = ? AND `welfare_no` = ?")
+	stmt, err := glob.DB.Prepare("DELETE FROM `welfare_user_score` WHERE `user_id` = ? AND `welfare_no` = ?")
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()

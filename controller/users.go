@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Hao1995/104hackathon/glob"
 	"github.com/Hao1995/104hackathon/models"
 	"github.com/Hao1995/104hackathon/utils"
 	"github.com/astaxie/beego/logs"
@@ -36,7 +37,7 @@ type UsersController struct {
 
 func (c *UsersController) get(httpLib *utils.HTTPLib) {
 
-	rows, err := db.Query("SELECT * FROM `users` ORDER BY `name`")
+	rows, err := glob.DB.Query("SELECT * FROM `users` ORDER BY `name`")
 	if err != nil {
 		logs.Error(err)
 		httpLib.WriteJSON(err)
@@ -78,7 +79,7 @@ func (c *UsersController) post(httpLib *utils.HTTPLib) {
 	}
 
 	// - Insert Data
-	tx, err := db.Begin()
+	tx, err := glob.DB.Begin()
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()
@@ -164,7 +165,7 @@ func (c *UsersController) delete(httpLib *utils.HTTPLib) {
 	}
 
 	// - Delete Data
-	stmt, err := db.Prepare("DELETE FROM `users` WHERE `id` = ?")
+	stmt, err := glob.DB.Prepare("DELETE FROM `users` WHERE `id` = ?")
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()

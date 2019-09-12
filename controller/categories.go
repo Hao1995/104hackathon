@@ -69,7 +69,7 @@ func SyncCategories(w http.ResponseWriter, req *http.Request) {
 
 	// - Get the size of companies data
 	var skipIdx int
-	rows, err := db.Query("SELECT COUNT(1) FROM `" + categoryField.Name + "`")
+	rows, err := glob.DB.Query("SELECT COUNT(1) FROM `" + categoryField.Name + "`")
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()
@@ -236,7 +236,7 @@ func syncCategoriesInsertData(wg *sync.WaitGroup, guard chan struct{}, errChan c
 	}
 	sqlStr = sqlStr[0 : len(sqlStr)-1]
 	// logs.Debug(sqlStr)
-	stmt, err := db.Prepare(sqlStr)
+	stmt, err := glob.DB.Prepare(sqlStr)
 	if err != nil {
 		logs.Error(err)
 		select {

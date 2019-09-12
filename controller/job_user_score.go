@@ -69,7 +69,7 @@ func (c *JobUserScoreController) get(httpLib *utils.HTTPLib) {
 	}
 
 	// - Company Name and Job Name and Total Score
-	err = db.QueryRow("SELECT `C`.`custno`, `C`.`name` AS `cust_name`, `J`.`jobno` AS `jobno`, `J`.`job` AS `job_name`, `JUS`.`good_score`, `JUS`.`bad_score` FROM `job_user_score` AS `JUS`, `jobs` AS `J`, `companies` AS `C` WHERE 1 = 1 AND `JUS`.`jobno` = `J`.`jobno` AND `J`.`custno` = `C`.`custno` AND `JUS`.`jobno` = ? AND `JUS`.`user_id` = ?", jobno, userID).Scan(&res.Custno, &res.CustName, &res.JobNo, &res.JobName, &res.GoodScore, &res.BadScore)
+	err = glob.DB.QueryRow("SELECT `C`.`custno`, `C`.`name` AS `cust_name`, `J`.`jobno` AS `jobno`, `J`.`job` AS `job_name`, `JUS`.`good_score`, `JUS`.`bad_score` FROM `job_user_score` AS `JUS`, `jobs` AS `J`, `companies` AS `C` WHERE 1 = 1 AND `JUS`.`jobno` = `J`.`jobno` AND `J`.`custno` = `C`.`custno` AND `JUS`.`jobno` = ? AND `JUS`.`user_id` = ?", jobno, userID).Scan(&res.Custno, &res.CustName, &res.JobNo, &res.JobName, &res.GoodScore, &res.BadScore)
 	if err != nil {
 		tmp := err.Error()
 		logs.Error(tmp)
@@ -79,7 +79,7 @@ func (c *JobUserScoreController) get(httpLib *utils.HTTPLib) {
 	}
 
 	// - Get the Welfares and Each Score
-	rows, err := db.Query("SELECT `W`.`id` AS `welfare_no`, `W`.`name` AS `welfare_name`, `WUS`.`score` FROM `job_welfares` AS `JW`, `welfares` AS `W`, `welfare_user_score` AS `WUS` WHERE 1 = 1 AND `JW`.`welfare_no` = `W`.`id` AND `W`.`id` = `WUS`.`welfare_no` AND `JW`.`jobno` = ? AND `WUS`.`user_id` = ? ORDER BY `welfare_no`", jobno, userID)
+	rows, err := glob.DB.Query("SELECT `W`.`id` AS `welfare_no`, `W`.`name` AS `welfare_name`, `WUS`.`score` FROM `job_welfares` AS `JW`, `welfares` AS `W`, `welfare_user_score` AS `WUS` WHERE 1 = 1 AND `JW`.`welfare_no` = `W`.`id` AND `W`.`id` = `WUS`.`welfare_no` AND `JW`.`jobno` = ? AND `WUS`.`user_id` = ? ORDER BY `welfare_no`", jobno, userID)
 	if err != nil {
 		tmp := err.Error()
 		logs.Error(tmp)
@@ -128,7 +128,7 @@ func (c *JobUserScoreController) post(httpLib *utils.HTTPLib) {
 
 	// - Sync Data
 	// Get job info
-	rows, err := db.Query("SELECT `jobno` FROM `jobs` WHERE (IFNULL(?, 1) = 1 OR `jobno` = ?)", jobno, jobno)
+	rows, err := glob.DB.Query("SELECT `jobno` FROM `jobs` WHERE (IFNULL(?, 1) = 1 OR `jobno` = ?)", jobno, jobno)
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()
@@ -150,7 +150,7 @@ func (c *JobUserScoreController) post(httpLib *utils.HTTPLib) {
 	}
 
 	// Get Users Info
-	rows, err = db.Query("SELECT `id` FROM `users` WHERE (IFNULL(?, 1) = 1 OR `id` = ?)", userID, userID)
+	rows, err = glob.DB.Query("SELECT `id` FROM `users` WHERE (IFNULL(?, 1) = 1 OR `id` = ?)", userID, userID)
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()
@@ -180,7 +180,7 @@ func (c *JobUserScoreController) post(httpLib *utils.HTTPLib) {
 		var vals []interface{}
 		for _, job := range jobs {
 			// Calculate Score
-			rows, err := db.Query("SELECT `WUS`.`score` AS `score` FROM `job_welfares` AS `JW`, `welfare_user_score` AS `WUS` WHERE 1 = 1 AND `JW`.`welfare_no` = `WUS`.`welfare_no` AND `WUS`.`user_id` = ? AND `JW`.`jobno` = ?", user, job)
+			rows, err := glob.DB.Query("SELECT `WUS`.`score` AS `score` FROM `job_welfares` AS `JW`, `welfare_user_score` AS `WUS` WHERE 1 = 1 AND `JW`.`welfare_no` = `WUS`.`welfare_no` AND `WUS`.`user_id` = ? AND `JW`.`jobno` = ?", user, job)
 			if err != nil {
 				logs.Error(err)
 				res.Error = err.Error()
@@ -219,7 +219,7 @@ func (c *JobUserScoreController) post(httpLib *utils.HTTPLib) {
 			if count == size-1 {
 				sqlStr = sqlStr[0 : len(sqlStr)-1]
 				sqlStr += " ON DUPLICATE KEY UPDATE `good_score` = VALUES(`good_score`), `bad_score` = VALUES(`bad_score`);"
-				if _, err := db.Exec(sqlStr, vals...); err != nil {
+				if _, err := glob.DB.Exec(sqlStr, vals...); err != nil {
 					logs.Error(err)
 					res.Error = err.Error()
 					httpLib.WriteJSON(res)
@@ -253,7 +253,7 @@ func (c *JobUserScoreController) delete(httpLib *utils.HTTPLib) {
 	}
 
 	// - Delete Data
-	exeRes, err := db.Exec("DELETE FROM `job_user_score` WHERE `jobno` = ?", jobno)
+	exeRes, err := glob.DB.Exec("DELETE FROM `job_user_score` WHERE `jobno` = ?", jobno)
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()

@@ -32,7 +32,7 @@ func SyncTrainClick(w http.ResponseWriter, req *http.Request) {
 
 	// - Get the size of train_click data
 	var trainClickIdx int
-	rows, err := db.Query("SELECT COUNT(1) FROM `train_click`")
+	rows, err := glob.DB.Query("SELECT COUNT(1) FROM `train_click`")
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()
@@ -213,7 +213,7 @@ func syncTrainClickInsertData(wg *sync.WaitGroup, guard chan struct{}, errChan c
 	}
 	sqlStr = sqlStr[0 : len(sqlStr)-1]
 	// logs.Trace(sqlStr)
-	stmt, err := db.Prepare(sqlStr)
+	stmt, err := glob.DB.Prepare(sqlStr)
 	if err != nil {
 		logs.Error(err)
 		select {
@@ -274,7 +274,7 @@ func (c *SyncTrainClickKeyController) post(httpLib *utils.HTTPLib) {
 
 	// - Sync Data
 	// Get job info
-	rows, err := db.Query("SELECT `id`, `querystring` FROM `train_click`")
+	rows, err := glob.DB.Query("SELECT `id`, `querystring` FROM `train_click`")
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()
@@ -283,7 +283,7 @@ func (c *SyncTrainClickKeyController) post(httpLib *utils.HTTPLib) {
 	}
 	defer rows.Close()
 
-	tx, err := db.Begin()
+	tx, err := glob.DB.Begin()
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()

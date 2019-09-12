@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/Hao1995/104hackathon/cache"
+
 	"github.com/Hao1995/104hackathon/config"
 	"github.com/Hao1995/104hackathon/glob"
 	"github.com/Hao1995/104hackathon/models"
@@ -28,7 +30,7 @@ func SyncJobs(w http.ResponseWriter, req *http.Request) {
 
 	// - Get the size of companies data
 	var jobsIdx int
-	rows, err := db.Query("SELECT COUNT(1) FROM `jobs`")
+	rows, err := glob.DB.Query("SELECT COUNT(1) FROM `jobs`")
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()
@@ -277,7 +279,7 @@ func syncJobsInsertData(wg *sync.WaitGroup, guard chan struct{}, errChan chan bo
 	}
 	sqlStr = sqlStr[0 : len(sqlStr)-1]
 	// logs.Debug(sqlStr)
-	stmt, err := db.Prepare(sqlStr)
+	stmt, err := glob.DB.Prepare(sqlStr)
 	if err != nil {
 		logs.Error(err)
 		select {
@@ -299,6 +301,12 @@ func syncJobsInsertData(wg *sync.WaitGroup, guard chan struct{}, errChan chan bo
 			return
 		}
 	}
+
+	// - New Function：Sync welfare data
+	// `job_welfares`, `job_user_score`
+
+	// Refresh cache of jobs
+	cache.GetJobsInstance().Refresh()
 
 	<-guard
 	return

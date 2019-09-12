@@ -28,7 +28,7 @@ func SyncCompanies(w http.ResponseWriter, req *http.Request) {
 
 	// - Get the size of companies data
 	var companiesIdx int
-	rows, err := db.Query("SELECT COUNT(1) FROM `companies`")
+	rows, err := glob.DB.Query("SELECT COUNT(1) FROM `companies`")
 	if err != nil {
 		logs.Error(err)
 		res.Error = err.Error()
@@ -178,7 +178,7 @@ func syncCompaniesInsertData(wg *sync.WaitGroup, guard chan struct{}, errChan ch
 	}
 	sqlStr = sqlStr[0 : len(sqlStr)-1]
 	// logs.Debug(sqlStr)
-	stmt, err := db.Prepare(sqlStr)
+	stmt, err := glob.DB.Prepare(sqlStr)
 	if err != nil {
 		logs.Error(err)
 		select {
