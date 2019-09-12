@@ -227,13 +227,13 @@ func (c *SearchJobsController) getJobsScoreAndAvgScore(jobMap map[int64]bool) ([
 	jobsScore := []models.JobUserScoreGetItem{}
 	var goodScore, badScore float64
 
-	stmt, err := glob.DB.Prepare("SELECT `J`.`jobno`, `JUS`.`good_score`, `JUS`.`bad_score` FROM `job_user_score` AS `JUS`, `jobs` AS `J`, `districts` AS `D` WHERE `JUS`.`jobno` = `J`.`jobno` AND `J`.`addr_no` = `D`.`id` AND `JUS`.`user_id` = ? AND (IFNULL(?, 1) = 1 OR `D`.`id` LIKE ?) AND `J`.`jobno` IN (?" + strings.Repeat(",?", len(jobMap)-1) + ") ORDER BY `good_score` DESC")
+	stmt, err := glob.DB.Prepare("SELECT `JUS`.`jobno`, `JUS`.`good_score`, `JUS`.`bad_score` FROM `jobs` AS `J` LEFT JOIN `job_user_score` AS `JUS` ON `J`.`jobno` = `JUS`.`jobno` AND `JUS`.`user_id` = ?, `districts` AS `D` WHERE 1 = 1 AND `J`.`addr_no` = `D`.`id` AND (IFNULL(?, 1) = 1 OR `D`.`id` LIKE ?) AND `J`.`jobno` IN (?" + strings.Repeat(",?", len(jobMap)-1) + ")")
 	if err != nil {
 		return nil, goodScore, badScore, err
 	}
 	defer stmt.Close()
 
-	// logs.Info("SELECT `J`.`jobno`, `JUS`.`good_score`, `JUS`.`bad_score` FROM `job_user_score` AS `JUS`, `jobs` AS `J`, `districts` AS `D` WHERE `JUS`.`jobno` = `J`.`jobno` AND `J`.`addr_no` = `D`.`id` AND `JUS`.`user_id` = ? AND (IFNULL(?, 1) = 1 OR `D`.`id` LIKE ?) AND `J`.`jobno` IN (?" + strings.Repeat(",?", len(jobMap)-1) + ") ORDER BY `good_score` DESC")
+	// logs.Info(SELECT `JUS`.`jobno`, `JUS`.`good_score`, `JUS`.`bad_score` FROM `jobs` AS `J` LEFT JOIN `job_user_score` AS `JUS` ON `J`.`jobno` = `JUS`.`jobno` AND `JUS`.`user_id` = ?, `districts` AS `D` WHERE 1 = 1 AND `J`.`addr_no` = `D`.`id` AND (IFNULL(?, 1) = 1 OR `D`.`id` LIKE ?) AND `J`.`jobno` IN (?" + strings.Repeat(",?", len(jobMap)-1) + ")")
 
 	vals := []interface{}{c.params.UserID, c.params.AddrNo, c.params.AddrNo}
 	for key := range jobMap {
@@ -306,8 +306,8 @@ func (c *SearchJobsController) getJobsPRAndAvgPR(jobsScore []models.JobUserScore
 	}
 	badPR := float64(badCount) / float64(countJobs)
 	countryScore.BadScore = &badPR
-	logs.Debug("Country Good PR = %v, Bad PR = %v", goodPR, badPR)
-	logs.Info("getPRofTotal = %v", time.Since(now))
+	logs.Debug("Area Good PR = %v, Bad PR = %v", goodPR, badPR)
+	logs.Info("getPRofArea = %v", time.Since(now))
 
 	// - Calculate Jobs PR
 	now = time.Now()
