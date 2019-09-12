@@ -45,52 +45,24 @@ type SearchJobsController struct {
 
 func (c *SearchJobsController) get() {
 
-	res := make(map[string]interface{})
-	res["country"] = nil
-	res["jobList"] = nil
-	res["Error"] = nil
+	res := &models.SearchJobsRes{}
 
 	// Init Params
 	if err := c.init(); err != nil {
 		logs.Error(err)
-		res["Error"] = err.Error()
+		res.Error = err
 		c.httpLib.WriteJSON(res)
 		return
 	}
 
-	// - Find The Jobs That Corresponding The Key
-	now := time.Now()
-	jobMap, err := c.findRelativeJobs()
+	// Get The Result
+	res, err := c.getResult()
 	if err != nil {
 		logs.Error(err)
-		res["Error"] = err.Error()
+		res.Error = err
 		c.httpLib.WriteJSON(res)
 		return
 	}
-	logs.Info("findRelativeJobs = %v", time.Since(now))
-
-	// - Find Length Of `jobs`
-	now = time.Now()
-	countJobs, err := c.countAllJobs()
-	if err != nil {
-		logs.Error(err)
-		res["Error"] = err.Error()
-		c.httpLib.WriteJSON(res)
-		return
-	}
-	logs.Info("countAllJobs = %v", time.Since(now))
-
-	// - Get the Jobs Score and Calculate It's PR.
-	countryScore, jobListScore, err := c.getJobsPR(jobMap, countJobs)
-	if err != nil {
-		logs.Error(err)
-		res["Error"] = err.Error()
-		c.httpLib.WriteJSON(res)
-		return
-	}
-
-	res["country"] = countryScore
-	res["jobList"] = jobListScore
 
 	c.httpLib.WriteJSON(res)
 	return
@@ -156,6 +128,60 @@ func (c *SearchJobsController) init() error {
 	return nil
 }
 
+func (c *SearchJobsController) getResult() (*models.SearchJobsRes, error) {
+
+	// - Find The Jobs That Corresponding The Key
+	now := time.Now()
+	jobMap, err := c.findRelativeJobs()
+	if err != nil {
+		return nil, err
+	}
+	logs.Info("findRelativeJobs spend %v", time.Since(now))
+
+	// - Find Length Of `jobs`
+	now = time.Now()
+	countJobs, err := c.countAllJobs()
+	if err != nil {
+		return nil, err
+	}
+	logs.Info("countAllJobs spend %v", time.Since(now))
+
+	// Get the Jobs Score
+	now = time.Now()
+	jobsScore, avgGoodScore, avgBadScore, err := c.getJobsScoreAndAvgScore(jobMap)
+	if err != nil {
+		return nil, err
+	}
+	logs.Info("getJobsScoreAndAvgScore = %v", time.Since(now))
+
+	// - Get the Number of Different Scores for Good and Bad, Respectively.
+	now = time.Now()
+	goodScores, badScores, err := c.getGoodBadScores()
+	if err != nil {
+		return nil, err
+	}
+	logs.Info("getGoodBadScores spend %v", time.Since(now))
+
+	// - Calculate AVG PR
+	now = time.Now()
+	goodPR, badPR := c.getAvgPR(avgGoodScore, avgBadScore, goodScores, badScores, countJobs)
+	logs.Info("getPRofArea spend %v", time.Since(now))
+
+	// - Calculate Jobs PR
+	now = time.Now()
+	jobsPR, err := c.getJobsPR(jobsScore, goodScores, badScores, countJobs)
+	if err != nil {
+		return nil, err
+	}
+	logs.Info("getPRofJobs = %v", time.Since(now))
+
+	return &models.SearchJobsRes{
+		Country: &models.SearchJobsScoreItem{
+			GoodScore: &goodPR,
+			BadScore:  &badPR},
+		JobList: &jobsPR}, nil
+}
+
 func (c *SearchJobsController) findRelativeJobs() (map[int64]bool, error) {
 
 	jobMap := make(map[int64]bool)
@@ -204,36 +230,18 @@ func (c *SearchJobsController) countAllJobs() (int64, error) {
 	return countJobs, nil
 }
 
-func (c *SearchJobsController) getJobsPR(jobMap map[int64]bool, countJobs int64) (models.SearchJobsScoreItem, []models.SearchJobsListItem, error) {
-
-	// Get the Jobs Score
-	now := time.Now()
-	jobsScore, avgGoodScore, avgBadScore, err := c.getJobsScoreAndAvgScore(jobMap)
-	if err != nil {
-		return models.SearchJobsScoreItem{}, nil, err
-	}
-	logs.Info("getJobsScoreAndAvgScore = %v", time.Since(now))
-
-	countryScore, jobListScore, err := c.getJobsPRAndAvgPR(jobsScore, avgGoodScore, avgBadScore, countJobs)
-	if err != nil {
-		return countryScore, nil, err
-	}
-
-	return countryScore, jobListScore, err
-}
-
 func (c *SearchJobsController) getJobsScoreAndAvgScore(jobMap map[int64]bool) ([]models.JobUserScoreGetItem, float64, float64, error) {
 
 	jobsScore := []models.JobUserScoreGetItem{}
 	var goodScore, badScore float64
 
-	stmt, err := glob.DB.Prepare("SELECT `JUS`.`jobno`, `JUS`.`good_score`, `JUS`.`bad_score` FROM `jobs` AS `J` LEFT JOIN `job_user_score` AS `JUS` ON `J`.`jobno` = `JUS`.`jobno` AND `JUS`.`user_id` = ?, `districts` AS `D` WHERE 1 = 1 AND `J`.`addr_no` = `D`.`id` AND (IFNULL(?, 1) = 1 OR `D`.`id` LIKE ?) AND `J`.`jobno` IN (?" + strings.Repeat(",?", len(jobMap)-1) + ")")
+	stmt, err := glob.DB.Prepare("SELECT `JUS`.`jobno`, `JUS`.`good_score`, `JUS`.`bad_score` FROM `jobs` AS `J` LEFT JOIN `job_user_score` AS `JUS` ON `J`.`jobno` = `JUS`.`jobno` AND `JUS`.`user_id` = ?, `districts` AS `D` WHERE 1 = 1 AND `J`.`addr_no` = `D`.`id` AND (IFNULL(?, 1) = 1 OR `D`.`id` LIKE ?) AND `J`.`jobno` IN (?" + strings.Repeat(",?", len(jobMap)-1) + ") ORDER BY `good_score` DESC")
 	if err != nil {
 		return nil, goodScore, badScore, err
 	}
 	defer stmt.Close()
 
-	// logs.Info(SELECT `JUS`.`jobno`, `JUS`.`good_score`, `JUS`.`bad_score` FROM `jobs` AS `J` LEFT JOIN `job_user_score` AS `JUS` ON `J`.`jobno` = `JUS`.`jobno` AND `JUS`.`user_id` = ?, `districts` AS `D` WHERE 1 = 1 AND `J`.`addr_no` = `D`.`id` AND (IFNULL(?, 1) = 1 OR `D`.`id` LIKE ?) AND `J`.`jobno` IN (?" + strings.Repeat(",?", len(jobMap)-1) + ")")
+	// logs.Info(SELECT `JUS`.`jobno`, `JUS`.`good_score`, `JUS`.`bad_score` FROM `jobs` AS `J` LEFT JOIN `job_user_score` AS `JUS` ON `J`.`jobno` = `JUS`.`jobno` AND `JUS`.`user_id` = ?, `districts` AS `D` WHERE 1 = 1 AND `J`.`addr_no` = `D`.`id` AND (IFNULL(?, 1) = 1 OR `D`.`id` LIKE ?) AND `J`.`jobno` IN (?" + strings.Repeat(",?", len(jobMap)-1) + ") ORDER BY `good_score` DESC")
 
 	vals := []interface{}{c.params.UserID, c.params.AddrNo, c.params.AddrNo}
 	for key := range jobMap {
@@ -269,28 +277,24 @@ func (c *SearchJobsController) getJobsScoreAndAvgScore(jobMap map[int64]bool) ([
 	return jobsScore, avgGoodScore, avgBadScore, nil
 }
 
-func (c *SearchJobsController) getJobsPRAndAvgPR(jobsScore []models.JobUserScoreGetItem, avgGoodScore, avgBadScore float64, countJobs int64) (models.SearchJobsScoreItem, []models.SearchJobsListItem, error) {
+func (c *SearchJobsController) getGoodBadScores() (map[int]int, map[int]int, error) {
 
-	// - New Function：Goroutine to fetch data of goodScore and badScore
-
-	countryScore := models.SearchJobsScoreItem{}
-	jobListScore := []models.SearchJobsListItem{}
-
-	// - Load all score data.
-	now := time.Now()
 	goodScores, err := c.getGoodScores()
 	if err != nil {
-		return countryScore, nil, err
+		return nil, nil, err
 	}
 
 	badScores, err := c.getBadScores()
 	if err != nil {
-		return countryScore, nil, err
+		return nil, nil, err
 	}
-	logs.Info("getGoodScores & getBadScores spend %v", time.Since(now))
+
+	return goodScores, badScores, nil
+}
+
+func (c *SearchJobsController) getAvgPR(avgGoodScore, avgBadScore float64, goodScores, badScores map[int]int, countJobs int64) (float64, float64) {
 
 	// - Calculate AVG PR
-	now = time.Now()
 	var goodCount, badCount int
 	for score, count := range goodScores {
 		if float64(score) < avgGoodScore {
@@ -298,19 +302,20 @@ func (c *SearchJobsController) getJobsPRAndAvgPR(jobsScore []models.JobUserScore
 		}
 	}
 	goodPR := float64(goodCount) / float64(countJobs)
-	countryScore.GoodScore = &goodPR
 	for score, count := range badScores {
 		if float64(score) > avgBadScore {
 			badCount += count
 		}
 	}
 	badPR := float64(badCount) / float64(countJobs)
-	countryScore.BadScore = &badPR
-	logs.Debug("Area Good PR = %v, Bad PR = %v", goodPR, badPR)
-	logs.Info("getPRofArea = %v", time.Since(now))
 
-	// - Calculate Jobs PR
-	now = time.Now()
+	logs.Debug("Area Good PR = %v, Bad PR = %v", goodPR, badPR)
+	return goodPR, badPR
+}
+
+func (c *SearchJobsController) getJobsPR(jobsScore []models.JobUserScoreGetItem, goodScores, badScores map[int]int, countJobs int64) ([]models.SearchJobsListItem, error) {
+
+	jobListScore := []models.SearchJobsListItem{}
 	startIdx := (c.params.Pi.Int64 - 1) * c.params.Ps.Int64
 	endIdx := c.params.Pi.Int64 * c.params.Ps.Int64
 	for _, item := range jobsScore[startIdx:endIdx] {
@@ -333,23 +338,19 @@ func (c *SearchJobsController) getJobsPRAndAvgPR(jobsScore []models.JobUserScore
 		jobScore.BadScore = &badPR
 
 		if err := glob.DB.QueryRow("SELECT `J`.`job` AS `job_name`, `C`.`name` AS `cust_name` FROM `jobs` AS `J`, `companies` AS `C` WHERE 1 = 1 AND `J`.`custno` = `C`.`custno` AND `J`.`jobno` = ?", item.JobNo).Scan(&jobScore.JobName, &jobScore.JobCompany); err != nil {
-			return countryScore, nil, err
+			return nil, err
 		}
 
 		jobListScore = append(jobListScore, jobScore)
 	}
-	logs.Info("getPRofJobs = %v", time.Since(now))
 
-	return countryScore, jobListScore, nil
+	return jobListScore, nil
 }
 
 func (c *SearchJobsController) getGoodScores() (map[int]int, error) {
 
-	// now := time.Now()
-
-	goodScores := make(map[int]int)
-
 	// Good
+	goodScores := make(map[int]int)
 	rows, err := glob.DB.Query("SELECT `good_score`, COUNT(1) AS `count` FROM `job_user_score` WHERE `user_id` = ? GROUP BY `good_score`", c.params.UserID)
 	if err != nil {
 		return goodScores, err
@@ -364,16 +365,13 @@ func (c *SearchJobsController) getGoodScores() (map[int]int, error) {
 		goodScores[score] = count
 	}
 
-	// logs.Info("getGoodScores spend = %v", time.Since(now))
 	return goodScores, nil
 }
 
 func (c *SearchJobsController) getBadScores() (map[int]int, error) {
 
-	// now := time.Now()
-	badScores := make(map[int]int)
-
 	// Bad
+	badScores := make(map[int]int)
 	rows, err := glob.DB.Query("SELECT `bad_score`, COUNT(1) AS `count` from `job_user_score` WHERE `user_id` = ? GROUP BY `bad_score`", c.params.UserID)
 	if err != nil {
 		return badScores, err
@@ -388,6 +386,5 @@ func (c *SearchJobsController) getBadScores() (map[int]int, error) {
 		badScores[score] = count
 	}
 
-	// logs.Info("getBadScores spend = %v", time.Since(now))
 	return badScores, nil
 }

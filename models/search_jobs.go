@@ -10,6 +10,12 @@ type SearchJobsParams struct {
 	Ps     sql.NullInt64
 }
 
+type SearchJobsRes struct {
+	Country *SearchJobsScoreItem  `json:"country"`
+	JobList *[]SearchJobsListItem `json:"jobList"`
+	Error   error                 `json:"error"`
+}
+
 type SearchJobsScoreItem struct {
 	GoodScore *float64 `json:"goodScore"`
 	BadScore  *float64 `json:"badScore"`
